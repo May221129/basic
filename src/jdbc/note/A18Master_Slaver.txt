@@ -1,0 +1,107 @@
+主从复制:
+	1:基本原理
+		1.1
+			slave或从master读取binlog来进行数据同步
+				流程:
+					1、master将改变记录到binary log中
+					2、slave将master的binary log 拷贝到它的中继日志中(relay log)
+					3、slave重做中继日志中的事件,将改变应用到自己的数据中, MySQL复制是异步且串行化的
+						异步是针对master而言是异步的. 串行是针对slave而言(一个事件一个事件得进行)
+						
+				binlog二进制日志log-bin
+				错误日志
+				查询日志   
+				好几种日志在第一章有讲过, 年少不自知, 居然没记录下来.
+	2:基本原则
+		每个slave只有一个master
+		每个slave只能有一个唯一的服务器ID
+		每个master可以有多个slave
+	3:最大问题
+		延时 
+	4：一主一从常见配置
+		1、master slave的版本尽量一致,  免得有什么幺蛾子.
+		2、master salve的配置都是在 [mysql]下配置. 尽量小写(与原来的配置文件规范最好一致).
+		3、环境说明, windows中是master，  linux下是slave
+			主机配置(my.ini文件):
+				配置主机id：
+					server-id=1
+				启用二进制日志:
+					log-bin=自己本地的路径/mysqlbin
+					例如:log-bin=D:/tool/MySQLServer5.5/data/mysqlbin
+					注意:mysqlbin不是一个文件夹, 而像是一个文件的前缀. mysql会依照这个前缀按需要生成sql bin文件
+				启用错误日志(可选):
+					log-err=自己本地的路径/msyqlerr
+					当复制不成功的时候,会有错误日志
+				跟目录(可选):
+					basedir=自己本地路径
+					例如: basedir=D:/tool/MySQLServer5.5/
+					就好像JAVA_HOME一样的存在, 具体什么用占不得知.
+				临时目录(可选):
+					tmpdir=自己的本地路径
+					例如:tmpdir=D:/tool/MySQLServer5.5/tmp/
+					临时数据, 临时文件存放的地方.
+				数据目录(可选):
+					datadir=自己本地的路径/Data
+					例如:tmpdir=D:/tool/MySQLServer5.5/Data/
+					数据存放的地方.
+				配置读写规则:
+					read-only=0
+					代表读写都可以.
+				设置不要复制的数据库(可选):
+					binlog-ignore-db=mysql   
+					这里的mysql是mysql自带的那个mysql库
+					代表忽略掉那个库不要复制到slave 
+				设置需要复制的数据库(可选)：
+					binlog-do-db=需要复制的数据的名字
+					
+				配置完成记得要重启
+				
+				在master上简历账户并授权slave:
+					GRANT REPLICATION SLAVE ON *.* TO 'coper'@'从机器数据库IP' IDENTIFIED BY 'star'
+					这行语句是做了授权: 指定了IP 和  用于slave登录master的用户名和密码.
+					当然这行是登录master之后执行的.
+					因为做了权限, 有时候可能需要刷新一下权限:flush privileges
+				查看master状态:
+					show master status;
+					记录下 File Position的值.
+						File是二进制日志文件的文件名.
+						Position是该文件的起点:
+							二进制日志文件可以早早就存在了, 但是只在某一个点开始的主从复制.
+							所以就应该要知道是要从二进制日志文件的哪里开始复制日志. 
+						Binlog_Do_DB:是需要做复制的库. 
+							看老师只配了不需要复制的库, 该栏为空, 但并不代表没有数据库需要复制.
+						Binlog_ignore_DB:不需要复制的库:
+							显示 mysql库
+					
+					
+			从机配置(my.cnf)
+				slave服务器唯一ID:
+					server-id=2
+				启用二进制日志:  
+					log-bin=mysql-bin
+					这个默认的配置里面好像有, 或者被注释掉了.   
+				配置完成记得要重启
+					
+				在slave上皮质需要复制的主机:
+					CHANGE MASTER TO MASTER_HOST='主机IP',MASTER_USER='coper',MASTER_PASSWORD='star',
+						MASTER_LOG_FILE='二进制文件名字',MASTER_LOG_POS=Positon数字;
+					这里填的都是主机上配置好的用户名密码,主机IP,主机show master status
+					注意:二进制的文件和起始位置信息要是最新的, 别老半天之后才过来配置, 说不定position都已经改变了.
+				
+				启动slave服务器的复制功能:
+					start slave
+				查看slave状态:
+					show slave status\G
+					有以下两行说明配置成功:
+					Slave_IO_Running:Yes
+					Slave_SQL_Running:Yes
+				如何停止从服务器的复制功能:
+					stop slave
+					
+	5:读写分离的办法:
+		好像是采取一些数据库的中间件
+		
+	6:异步 同步
+		mysql默认是异步复制.
+		自从mysql5.5之后也支持了半同步复制,不过需要安装和设置其他参数.
+		https://www.cnblogs.com/loveaviva/p/4142254.html

@@ -1,0 +1,18 @@
+in exist的用法及其区别:
+	in用法: select * from classmate m where m.classroomid in (select c.id from classroom c);
+		先查询教室id的集合, 然后再拿这个集合一条一条的去对classmate.
+		for(循环classroom){
+			for(循环classmate){
+			}
+		}
+	exist用法: exist(...)这个表达式会返回false或者true.
+		用exist改写上面的in: 
+		select * from classmate m where exist(select 1 from classroom c where m.classroomid = c.id);
+		先查出classmate的集合, 然后拿这个集合去一条一条的判断是否存在.
+		for(循环classmate){
+			for(循环classroom){
+			}
+		}
+	
+	这二者谁更优呢:
+		原则是小表驱动大表.  以此选择是in还是exist

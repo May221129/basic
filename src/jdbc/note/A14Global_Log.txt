@@ -1,0 +1,17 @@
+全局日志:
+	1:永远不要在生产环境开启这个功能.
+	2:文件配置:
+		开启
+		general_log=1
+		记录日志文件的路径
+		general_log_file=/path/logfile
+		输出格式
+		log_output=FILE
+	3:命令行配置
+		set global general_log=1;
+		set global log_output='TABLE';//  以表的形式来记录数据而不是文件
+		
+		此后, 你所编写的sql语句, 将会记录到mysql库里的general_log表, 可以用下面的命令查看.
+		select * from mysql.general_log;
+		
+	4：感觉作用是用于复现一些情况, 因为它只是记录时间和sql

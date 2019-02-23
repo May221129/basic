@@ -1,0 +1,46 @@
+是什么:
+	buffer pool 是innodb存储引擎带的一个缓存池，查询数据时，首先从内存中查询数据如果内存中存在的话直接返回。
+	注意是InnoDB的.
+	
+innodb  buffer  pool 和 qcache 的区别：
+	Qcache 缓存的是sql语句对应的结果集，buffer pool中缓存的是表中的数据（热）。buffer pool是设置的越大越好，一般设置为
+	物理服务器内存的70%-80%.
+	
+设置:show global variables like '%buffer_pool%';
+	innodb_buffer_pool_dump_at_shutdown
+		默认关闭, 当mysql关闭的时候, 会把buffer_poll中的中是数据dump到本地.(mysql需要正常关闭才行, 可不行kill)
+	innodb_buffer_pool_dump_now
+		默认关闭,  现在把buffer_poll中的中是数据dump到本地
+	innodb_buffer_pool_filename
+		buffer_poll的数据导出的文件名
+	innodb_buffer_pool_instances
+		默认值是8,可以开启多个内存缓冲池，把需要缓冲的数据hash到不同的缓冲池中，这样可以并行的内存读写。
+		并没有做过该值的调优, 网上说在mysql是高负载的时候才有效果.
+	innodb_buffer_pool_load_abort
+		将文件中的内容加载到buffer pool的过程打断.默认关闭
+	innodb_buffer_pool_load_at_startup
+		默认关闭, mysql启动是将文件中的内容加载到buffer pool
+	innodb_buffer_pool_load_now
+		默认关闭,  现在将文件中的内容加载到buffer pool
+	innodb_buffer_pool_size
+		默认是128M,  单位是字节.
+		官网建议是设置系统内存的百分之80.  不要设置太高, 因为夺取系统自身资源,可能会更慢.
+		mysql5.7还能动态的调整大小.
+		
+	以上想要永久有效,当然是写在配置文件中.
+	
+状态:show status like '%innodb_buffer_pool%';
+	Innodb_buffer_pool_read_requests
+		innodb进行逻辑读的数量。单位是次。
+	Innodb_buffer_pool_reads
+		进行逻辑读取时无法从缓冲池中获取而执行单页读取的次数。单位是次。
+	命中率:innodb_buffer_read_hits=(1-Innodb_buffer_pool_reads/Innodb_buffer_pool_read_requests) * 100%
+		如果把这个innodb_buffer_pool命中率作为监控项的话，建议设置90%为触发值，低于90%则要考虑加大innodb_buffer_pool_size
+
+失效: 
+	这个缓存好像是通过     最近最少使用算法——LRU  来管理内存
+		内存要是满了, 就失效掉最长时间没用到的.
+	LRU算法可以百度,  也是挺好玩的,  最简单就用链表.   
+	
+关于mysql的缓存还有挺多的.
+	比如innodb_log_buffer_size好像是关于事务的缓存.   不是很了解. 以后遇到再补充

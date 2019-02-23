@@ -1,0 +1,79 @@
+mysql缓存:
+	1:缓存工作流程:(根据高性能mysql上的图看来, sql可以直接查询缓存模块,也可以到解析器完毕之后到查询缓存模块, 如果有的话直接返回结果
+		,如果没有的话就会走到优化器再继续往下走.)
+		1. 服务器接收SQL,以SQL和一些其他条件为key查找缓存表(额外性能消耗)
+		2. 如果找到了缓存,则直接返回缓存(性能提升)
+		3. 如果没有找到缓存,则执行SQL查询,包括原来的SQL解析,优化等.
+		4. 执行完SQL查询结果以后,将SQL查询结果存入缓存表(额外性能消耗)
+
+	2:缓存命中条件:
+		缓存存在一个hash表中,通过查询SQL,查询数据库,客户端协议等作为key.在判断是否命中前,
+			MySQL不会解析SQL,而是直接使用SQL去查询缓存。
+		SQL任何字符上的不同,如空格,注释,都会导致缓存不命中.
+		如果查询中有不确定数据,例如CURRENT_DATE()和NOW()函数,那么查询完毕后则不会被缓存.所以,包含不确定数据的查询是肯定不会找到可用缓存的
+	
+	3:缓存的内存管理
+		1:缓存会在内存中开辟一块内存(query_cache_size)来维护缓存数据,其中有大概40K的空间是用来维护缓存的元数据的,例如空间内存,数据表和查询结果的映射,SQL和查询结果的映射等.
+		2:MySQL将这个大内存块分为小的内存块(query_cache_min_res_unit),每个小块中存储自身的类型,大小和查询结果数据,还有指向前后内存块的指针.
+		3:MySQL需要设置单个小存储块的大小,在SQL查询开始(还未得到结果)时就去申请一块空间,所以即使你的缓存数据没有达到这个大小,也需要用这个大小的数据块去存,
+			如果结果超出这个内存块的大小,则需要再去申请一个内存块.当查询完成发现申请的内存块有富余,则会将富余的空间释放掉,这就会造成内存碎片问题
+			
+	4:缓存的使用时机
+		衡量打开缓存是否对系统有性能提升是一个很难的话题
+		1. 通过缓存命中率判断, 缓存命中率 = 缓存命中次数 (Qcache_hits) / 查询次数 (Com_select)
+		2. 通过缓存写入率, 写入率 = 缓存写入次数 (Qcache_inserts) / 查询次数 (Qcache_inserts)
+		3. 通过 命中-写入率 判断, 比率 = 命中次数 (Qcache_hits) / 写入次数 (Qcache_inserts), 高性能MySQL中称之为比较能反映性能提升的指数,一般来说达到3:1则算是查询缓存有效,而最好能够达到10:1
+	
+	5:缓存配置参数
+		show variables like '%query_cache%'; 可以看到下面的参数值
+			1:query_cache_type: 是否打开缓存
+				1) OFF: 关闭
+				2) ON: 总是打开
+				3) DEMAND: 只有明确写了SQL_CACHE的查询才会吸入缓存
+			2:query_cache_size: 缓存使用的总内存空间大小,单位是字节,这个值必须是1024的整数倍,
+				否则MySQL实际分配可能跟这个数值不同(感觉这个应该跟文件系统的blcok大小有关)
+			3:query_cache_min_res_unit: 分配内存块时的最小单位大小
+			4:query_cache_limit: MySQL能够缓存的最大结果,如果超出,则增加 Qcache_not_cached的值,并删除查询结果
+			5:query_cache_wlock_invalidate: 如果某个数据表被锁住,是否仍然从缓存中返回数据,默认是OFF,表示仍然可以返回
+	
+	6:缓存状态
+		show status like 'Qcache%';可看到缓存的状态值
+			Qcache_free_blocks: 缓存池中空闲块的个数
+			Qcache_free_memory: 缓存中空闲内存量
+			Qcache_hits: 缓存命中次数
+			Qcache_inserts: 缓存写入次数
+			Qcache_lowmen_prunes: 因内存不足删除缓存次数
+			Qcache_not_cached: 查询未被缓存次数,例如查询结果超出缓存块大小,查询中包含可变函数等
+			Qcache_queries_in_cache: 当前缓存中缓存的SQL数量
+			Qcache_total_blocks: 缓存总block数
+	
+	7:减少碎片的策略:
+		1. 选择合适的block大小
+		2. 使用 FLUSH QUERY CACHE 命令整理碎片.这个命令在整理缓存期间,会导致其他连接无法使用查询缓存
+		PS: 清空缓存的命令式 RESET QUERY CACHE
+	
+	8:配置缓存策略:
+		关注点: 命中率, 缓存状态(无法缓存数量),query_cache_limit, 内存碎片(query_cache_min_res_unit), query_cache_size, 数据预热
+		这个策略的流程图很好, 很强大.  详见 同级目录的  mysql_cache_conf.png
+		
+	9: 有些版本的mysql并不一定查询缓存是默认开启的.
+		如果mysql启动的时候query_cache_type是off的话, 那么就无法通过命令去改变其状态,会报错:
+		Query cache is disabled; restart the server with query_cache_type=1 to enabl
+		这时候,只能去改配置文件了.  [mysqld]下增加 query_cache_type=1
+	
+	10:在sql上强制要求cache操作
+		SQL_NO_CACHE: 表示该sql不会从缓存中取结果.  该条sql也不会insert到缓存中.
+		SQL_CACHE: 表示该sql会从缓存中取结果(当然要看能不能命中).  该条sql也会insert到缓存中(当然要看是否符合放入缓存的条件).
+			这个参数应该是配合(query_cache_type为DEMAND)这个设置来使用的. 就表示只有sql中用上了SQL_CACHE的sql才会进行缓存查询和缓存.
+			
+	11: QC(query cache)如果运用的不好,很可能会带来性能的降低.
+		首先缓存操作肯定是要费系统资源的. 
+		一旦表被更改,缓存关于该表的所有缓存全部清除.这肯定也会耗费系统资源.
+		缓存内存开太大的话, 那处理内存碎片等关乎内存操作的动作又将耗费大量系统资源.
+		
+		关于这些种种情况在第八点中有相应的处理办法.
+		我觉得让缓存得不到应有的作用是因为用的人的问题.  所以  请至少配置一下让query_cache_type为DEMAND(只有明确写了SQL_CACHE的查询才会吸入缓存)
+			
+		
+	12:测试缓存机制什么的. 就不要用其他的可视化工具了, 鬼知道那些工具会不会帮你做了缓存.
+		

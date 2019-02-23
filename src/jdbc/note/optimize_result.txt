@@ -1,0 +1,76 @@
+查看注册信息列表
+
+优化前时间:
+	29秒
+	
+优化后:
+		368w	177w	87w		38w		11w
+方案1		33秒		16秒		6秒		3.1秒	0.6秒		用索引
+方案2		29秒		16秒		8秒		6秒		0.6秒		不用索引
+方案3		2.1秒	0.2秒	0.2秒	不用框架的count(*) 效果可能没这么好, 因为实验环境中使用的索引是createtime, 而createtime的重复率还挺高.  生产环境的createtime重复的概率应该很小.
+方案4		1秒		改成myisam引擎, 当然需要配套的主从复制的配合.
+
+症结是框架自带的计数sql 
+	sql1:SELECT COUNT(*) AS count1 
+		FROM ( 
+			SELECT id,uid,operate_system,os_version,regcha_code,channel_version, phone_type,imei_code,longitude,latitude,ip,canton_code,reg_time,device_name 
+				FROM meb_log_reg mlr 
+					WHERE mlr.isvalid = 1  AND reg_time between 1502693322315 and 1502985770166  
+						order by reg_time desc 
+			) AS t1;
+
+如果用其他的计数sql:
+		select count(*) from meb_log_reg where reg_time between 1502693322315 and  1503914780782;
+		7秒		2.1秒	0.3秒	0.2秒	0.09秒
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+查看登录信息列表
+	
+	跟查看注册信息列表一样
+	1.5秒		0.2秒		0.2秒	
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+	
+优化前:
+	575秒
+
+	优化后也是几十秒级的. 除非数据量很小.  小到10w以下的数据量就可以保持在1秒左右
+	
+	建议点:
+		确定这个接口的功能使用场景.
+		修改数据引擎. 涉及到主从数据库.
+		修改索引的数据类型. 涉及到大范围的数据类型更改.
+		建立专门的查询表. 不过就为一个查询就建立这么一张表不好吧~
+	
+1502693322315		1503914780782
+
+1502693322315		1502985796049
+
+1502693322315		1502793716999
+
+1502693322315		1502702684395
+
+1502693322315		1502693737401
+
+
+SELECT count(*) FROM meb_log_reg mlr force index (mreg_rtimeregcha_nor) WHERE mlr.isvalid = 1  AND reg_time between 1502693322315 and 1503914780782
+ order by reg_time desc;
+ 
+ SELECT count(*) FROM meb_log_reg mlr WHERE mlr.isvalid = 1  AND reg_time between 1502693322315 and 1503914780782
+ order by reg_time desc;
+ 
+SELECT count(*) FROM meb_log_reg mlr force index (mreg_rtimeregcha_nor) WHERE  reg_time between 1502693322315 and 1503914780782;
+ 
+SELECT count(*) FROM meb_log_reg mlr force index (mreg_rtimeregcha_nor) WHERE mlr.isvalid = 1  AND reg_time between 1502693322315 and 1503914780782;
+
+
+SELECT count(*) FROM meb_info mi LEFT JOIN meb_info_per mip ON mi.uid = mip.uid LEFT JOIN sys_system sys on (sys.id=mi.system_id) LEFT JOIN meb_log_reg reg on(reg.uid=mi.uid) WHERE  mi.isvalid = 1  and mi.type = 10  AND  mi.system_id = '20170810011419096632898397738212'  AND  mi.status = '1'  AND  reg.reg_time >= 1502693322315  AND  reg.reg_time <= 1502985796049; 
+SELECT COUNT(*) AS count1 FROM ( SELECT mi.uid,mip.tel,mip.nickname,mip.realname,mi.system_id,mi.`status`,sys.name as system_name, sys.code as system_code FROM meb_info mi LEFT JOIN meb_info_per mip ON mi.uid = mip.uid LEFT JOIN sys_system sys on (sys.id=mi.system_id) LEFT JOIN meb_log_reg reg on(reg.uid=mi.uid) WHERE  mi.isvalid = 1  and mi.type = 10  AND  mi.system_id = '20170810011419096632898397738212'  AND  mi.status = '1'  AND  reg.reg_time >= 1502693322315  AND  reg.reg_time <= 1502985796049  order by reg.reg_time desc ) AS t1;
+
+SELECT count(*) from sys_system sys INNER JOIN  meb_info mi on (sys.id=mi.system_id) INNER JOIN meb_info_per mip ON mi.uid = mip.uid  INNER JOIN meb_log_reg reg on(reg.uid=mi.uid) WHERE mi.isvalid = 1  and mi.type = 10  AND  mi.system_id = '20170810011419096632898397738212'  AND  mi.status = '1'  AND  reg.reg_time >= 1502693322315  AND  reg.reg_time <= 1502985796049; 
+ 		
+SELECT count(*) from sys_system sys INNER JOIN  meb_info mi on (sys.id=mi.system_id) INNER JOIN meb_info_per mip ON mi.uid = mip.uid  INNER JOIN meb_log_reg reg on(reg.uid=mi.uid) WHERE mi.isvalid = 1  and mi.type = 10  AND  mi.system_id = '20170810011419096632898397738212'  AND  mi.status = '1'  AND  reg.reg_time >= 1502693322315  AND  reg.reg_time <= 1502985796049; 
+ 
+SELECT count(*) from meb_log_reg reg LEFT JOIN meb_info mi on(reg.uid=mi.uid) INNER JOIN sys_system sys on (sys.id=mi.system_id) INNER JOIN meb_info_per mip ON mi.uid = mip.uid  WHERE mi.isvalid = 1  and mi.type = 10  AND  mi.system_id = '20170810011419096632898397738212'  AND  mi.status = '1'  AND  reg.reg_time >= 1502693322315  AND  reg.reg_time <= 1502985796049; 
+ 
+		

@@ -1,0 +1,137 @@
+1：note_sql中的第5点中的两种表  student student_class
+	1.1 100万数据
+		1.1.1:
+			select count(*) from student(主键是bigint类型)   (经再次测试, count(id) count(name)  count(age)结果都是一样的,  虽然count(id)type是index)
+				0.66350200秒
+				主键大小影响速度的原因, 这里是 sending data耗时最大
+		1.1.2:
+			select * from student where name = 'yl9TQeTGzAzW5hV'  name没有索引	
+				0.70943000秒
+				sending data耗时最大
+		1.1.3：
+			select * from student s left join student_class c on(s.class_id=c.id) where s.name like '%ssss%' order by createtime
+				0.86394600秒
+			先查student表, all, 有filesort.   student_class 是eq_ref
+			Creating sort index最大
+		1.1.4:
+			select * from student where status = 1 group by grade
+				0.81444375秒
+			type是all.  extra:Using temporary; Using filesort
+			虽然有create tmp table但是时间占用很少.   也是sending data最屌.
+		1.1.5:
+			select c.id, c.classname,count(*) from student_class c inner join student s on(c.id=s.class_id) group by c.id;
+				1.01 sec
+			先全表查student  Using temporary; Using filesort,   再eq_reg查 student_class表
+		1.1.6:	
+			select * , count(*) as count from student group by name having count > 1
+			9.8秒
+			
+		
+		玩大了,  家里用的mysql5.5  公司是5.6  结果不一样......  5.5的话跟老师说的差不多.
+			5.5版本的确实跟老师说的一样 
+				有Creating tmp table、Copying to tmp table、removing tmp table步骤,  其中Copying to tmp table费时最大.
+			5.6版本就只是sending data
+			
+			给我的感觉很像是5.5的时间比较具体,  而5.6把相应的时间全部挪到了sending data中了, 不过  还是会出现
+				converting heap to MyIsam
+				create tmp table
+				copying to tem table
+				copying to tmp table on disk
+				locked
+				出现还是会出现， 只不过时间都不算高.  sending data的时间倒是飚高.
+			
+			5.5 5.6两个版本的explain的结果是一毛一样的.
+			
+	1.2 200万数据
+		1.2.1：
+			select count(*) from student
+				2秒
+		1.2.1：
+			select * from student where name = 'yl9TQeTGzAzW5hV';
+				1.93秒
+		1.2.3	
+			select c.id, c.classname,count(*) from student_class c inner join student s on(c.id=s.class_id) group by c.id;
+				2.7秒
+		1.2.4:	
+			select * , count(*) as count from student group by name having count > 1
+				30.2秒
+	1.3	300万数据
+		1.3.1：
+			select count(*) from student
+				2.99秒
+		1.3.1：
+			select * from student where name = 'yl9TQeTGzAzW5hV';
+				3.09秒
+		1.3.3	
+			select c.id, c.classname,count(*) from student_class c inner join student s on(c.id=s.class_id) group by c.id;
+				3.98秒
+		1.3.4:	
+			select * , count(*) as count from student group by name having count > 1
+				55.43秒
+		给300万行的数据建立name索引, 耗时34.55秒
+			然后select * from student where name = 'yl9TQeTGzAzWfhVs';  
+			耗时就是0.00秒.
+		给300万行的数据建立class_id索引, 耗时19秒
+			然后select c.id, c.classname,count(*) from student_class c inner join student s on(c.id=s.class_id) group by c.id;
+			耗时就是0.84秒.
+			看这个sql的explain想象其过程:  先找的班级表, 且索引覆盖.   然后一个一个的拿班级id去student表查(Student表中classid索引 大约每个索引的占比是1/90, 因为有90个班级).
+				之前的笔记有说过,  这样用索引找行信息的话, 因为是随机IO, 如果数据量大的话就会慢, 所以保守一点 被索引的字段不要超过百分之15.  虽然这里的情况是1/90,但是以为数据量多(300万).
+				所以随机io量也是不少的(由索引去找数据行).  所以我感觉0.84秒就是开销在了这样的地方.  show profile 指出 0.84秒的出处是 sending data.
+		
+		给student表创建了两个索引, 然后再插入50条纪录.   吊炸天.   从原来的40秒左右  到320秒左右.  
+		
+	1.4	500万数据
+		1.4.1：
+			select count(*) from student
+				4.84秒
+		1.4.1：
+			select * from student where name = 'yl9TQeTGzAzW5hV';
+				4.95秒
+		1.4.3	
+			select c.id, c.classname,count(*) from student_class c inner join student s on(c.id=s.class_id) group by c.id;
+				6.69秒
+		1.4.4:	
+			select * , count(*) as count from student group by name having count > 1
+				101.43秒
+	
+	1.5	1000万数据
+		1.5.1：
+			select count(*) from student
+				10.39秒
+		1.5.1：
+			select * from student where name = 'yl9TQeTGzAzW5hV';
+				10.22秒
+		1.5.3	
+			select c.id, c.classname,count(*) from student_class c inner join student s on(c.id=s.class_id) group by c.id;
+				13.31秒
+		1.5.4:	
+			select * , count(*) as count from student group by name having count > 1
+				201.82秒
+				
+		给300万行的数据建立name索引, 耗时127.85秒
+			然后select * from student where name = 'yl9TQeTGzAzWfhVs';  
+			耗时就是0.00秒.
+		给300万行的数据建立class_id索引, 耗时68.29秒
+			然后select c.id, c.classname,count(*) from student_class c inner join student s on(c.id=s.class_id) group by c.id;
+			耗时就是3.58秒.
+				
+				
+	阶段性总结:
+		简单到中偏下复杂度的sql, 在windows下面  pc机器.  100万-1000万. 基本上是对应上1秒-10秒.
+			100万的时候会小于1秒, 大概0.6~0.8.  
+			在数据量增大的过程当中, 要小心并非线性增长, 而可能是呈指数增长.   
+				
+				
+				
+	realtest 数据库 test_a  test_b两张表, 分别有两个字段 a表两个字段都是int型,  b表两个字段都是char类型.
+		count各种字段包括*的时候, 效率差别都非常大,  500万数据,  a表是3秒左右, b表是50秒左右.
+		explain的结果是  如果是count(1)或*或者id的时候type是index, 不过就算没有用到index效率相差无几.
+		show profile的结果表明时间都花在sending data上了. 
+		
+		count(*)的情况还是要再测一测
+				
+		stif_user库 meb_log_reg count(*) 360w数据, 11~12秒左右
+		lgr_test库 student 	   count(*)  300w数据  3秒左右
+				
+				
+				

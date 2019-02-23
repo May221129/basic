@@ -1,0 +1,120 @@
+mysql的锁机制:
+	1:锁的基本概念:
+		1.1 按对数据操作类型划分:
+			1.1.1前提:
+				1:不管是数据引擎是InnoDB还是MyISAM都是有读锁和写锁的. 以下命令都是针对表的,也就是说是表锁.
+				2:show open tables; 
+					查看所有被打开的表列表(是所有,并非只有当前会话).  in_use列. 可以查看该表是否被锁 0表示无锁,  1表示被锁.
+				3:lock table {tableName} {read|write};
+					例如: lock table city read;
+				4:unlock tables;
+					给当前会话所有锁住表解锁.
+				
+			1.1.2读锁(共享锁):针对同一份数据, 多个读操作可以同时进行而不互相影响.
+				会话1锁住a表的时候:
+					会话1可读a表.
+					会话1不可读其他表(除非a表被解锁).
+					会话1不可写任何表(包括a表).
+					总:会话1锁住了a表, 所以要对a负责完之后才能去搞其他表.
+					
+					会话2可读a表.
+					会话2可读其他表.
+					会话2不可写a表, 会被阻塞住知道a表被解锁.
+					会话2可写其他表.
+					总:因为a表被锁, 导致影响到会话2对a表的操作,  不过并不影响会话2去搞其他表.
+						
+					注意点: 有些操作对会话1来讲是直接报错, 对会话2是阻塞.
+					 
+			1.1.3写锁(排它锁):当前写操作没有完成前, 它会阻断其他写锁和读锁.
+				会话1锁住a表的时候:
+					会话1可读a表.
+					会话1可写a表.
+					会话1不可读其他表(除非a表被解锁).
+					会话1不可写其他表(除非a表被解锁).
+					总:会话1对a表上了写锁, 会话1对a表的权限会大点(比上读锁大)
+					
+					会话2不可读a表(被阻塞).
+					会话2可读其他表.
+					会话2不可写a表(被阻塞).
+					会话2可写其他表.
+			
+				以上简而言之:	读锁会阻塞写, 但是不会阻塞读.
+						写锁会阻塞读和写.
+						这里是说阻塞,也就是全是针对其他会话的.
+			
+			1.1.4 注意/疑惑点: 以上说的会话是一个事务内,还是一个连接内. 
+				好像不是一个事务内, 因为我实验都是在dos窗口完成的,都是单事务.
+				会话应该是一个连接内.
+				
+			1.1.5 以上说的读锁和写锁, 并不是专门针对表锁. 行锁也是可以有读写锁的, 
+				学InnoDB的时候进行行锁	(写锁):for update;
+									(读锁):lock in share mode;
+									
+		1.2 按加锁的粒度划分:
+			表锁:
+				1: MyISAM在执行查询语句(SELECT)前,会自动给涉及的所有表加读锁,
+					在执行增删改操作前,会自动给涉及的表加写锁.
+				
+				2: 分析表锁的频度,及表锁争用等待情况:
+					show status like 'table%';
+					两行:
+						table_locks_immediate: 产生表级锁定的次数. 也就是 lock table {tableName} {read|write}的次数
+						table_locks_waited: 出现表级锁定争用而发生等待的次数. 也就是CRUD动作而被阻塞的次数.
+						
+						经过试验.
+							1:
+								session1:lock tabla aa read;
+								session2:update aa set col2 = 's' where id =1;
+								table_locks_immediate, table_locks_waited都会+1.
+							2：
+								session1:lock tabla aa write;
+								session2:update aa set col2 = 's' where id =1;
+								table_locks_immediate, table_locks_waited 都没有变化
+									原因是:mysql5.5引入了metadata lock(MDL),对表的访问都需要获取MDL,
+									在这个例子中,session1拥有排他的MDL,因此session2是被锁在获取MDL的阶段.
+									由于MDL是在获取表锁之前,因此在session2被lock时,上述两个变量都不变.
+						如果使用InnoDB引擎的情况下, 会表锁的情况大大减少.除非人为的去lock table
+						如果使用MyISAM引擎的情况下, 高并发的情况下, 以上两个参数将大大增加.
+						注意:在mysqldump导出表时, 会lock table.
+						
+				3:	MyISAM的锁机制是写优先, 所以MyISAM并不适合做写优先的引擎,因为写锁后, 其他线程不能做任何操作.
+					大量的更新会使得查询很难得到锁.
+			行锁:
+				1:InnoDB引擎提供了行锁的机制.(与MyISAM最大的区别是    事务.行级锁)
+					开销大,加锁慢.
+					会出现死锁的情况.
+					锁粒度最小.  所以并发自然也就比较高.
+					
+				2:show status like 'innodb_row_lock%';
+					Innodb_row_lock_current_waits
+						当前正在等待锁定的数量:
+					Innodb_row_lock_time
+						从系统启动到现在锁定总时间长度
+					Innodb_row_lock_time_avg
+						每次等待所花平均时间
+					Innodb_row_lock_time_max
+						从系统启动到现在等待最长的一次时间
+					Innodb_row_lock_waits
+						系统启动到现在总共等待的次数
+				3:优化建议：
+					查询尽可能用上索引，不然会表锁
+					建立适当的索引, 比如唯一索引, 缩小锁的范围 
+					尽量控制事务大小,减少锁定资源量以及时间长度.
+					尽可能的低级别的事务隔离级			
+			
+				4:关于InnoDB的行锁 详情就看http://hedengcheng.com/?p=771#_Toc374698322
+				
+				5:死锁分析与解决
+					the solution to deadlock文档
+					
+					show engine innodb status \G;
+					
+					show VARIABLES like 'innodb_lock_wait_timeout';//默认锁timeout时间50秒
+			页锁:
+				开销和加锁时间介于表锁和行锁之间；
+				会出现死锁
+				锁粒度介于表锁和行锁之间
+				并发度一般
+			
+			Metadata_lock:
+				详见Test5_Metadata_Lock.java

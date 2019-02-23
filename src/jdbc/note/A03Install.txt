@@ -1,0 +1,145 @@
+Linux mysql的安装和配置   
+	使用压缩文件、 RPM安装文件两种方式进行安装.  怎么感觉RPM是有分Client和Server
+		二进制包安装， 源码包安装， RPM包安装
+	源码包安装方法:
+
+mysql源码包安装步骤:
+	1:源码包安装所需要的一些软件及工具:
+		cmake,make,gcc,gcc-c++,bison, ncurses,ncurses-devel
+		直接用yum安装即可.
+	2:创建mysql用户及mysql用户组
+		groupadd mysql
+		useradd -r -g mysql -s /bin/false mysql
+	3:我们将mysql源码包放在/usr/local/src/mysql中.
+	      我们将mysql安装在/usr/local/mysql中.
+	      所以都这些目录都需要提前先mkdir
+	      
+	4：将mysql的源码下载到/usr/local/src/mysql中
+		用wget或者先下载到windows再来过也行.
+		wget https://dev.mysql.com/get/Downloads/MySQL-5.6/MySQL-5.6.38-1.el6.src.rpm
+		注意下载下来的是.rpm结尾的rpm包.   不是直接给的源码包:
+			rpm -ivh MySQL-5.6.38-1.el6.src.rpm.
+			这个rpm会把源码包的压缩包放在一个指定的地方. 至于那个地方在哪似乎是不同版本都不一样. 不过肯定有一个目录名可以确定:SOURCES
+			我是通过find / -name SOURCES这样才找见源码包的.  我的是在/root/rpmbuild/SOURCES/mysql-5.6.38.tar.gz
+			将mysql-5.6.38.tar.gz剪贴到/usr/local/src/mysql即可
+	
+	5:将源码解压到/usr/local/src/mysql中
+		tar -xzf mysql-5.6.38.tar.gz
+	6:配置mysql预编译参数
+		进入源码的目录中
+		cd /usr/local/src/mysql/mysql-5.6.38
+		cmake -DCMAKE_INSTALL_PREFIX=/usr/local/mysql/ -DMYSQL_UNIX_ADDR=/tmp/mysql.sock \
+		    -DDEFAULT_CHARSET=utf8 -DDEFAULT_COLLATION=utf8_general_ci -DWITH_EXTRA_CHARSETS=utf8,gbk  \
+		    -DWITH_PERFSCHEMA_STORAGE_ENGINE=1 -DWITH_FEDERATED_STORAGE_ENGINE=1 -DWITH_PARTITION_STORAGE_ENGINE=1 \
+		    -DWITH_ARCHIVE_STORAGE_ENGINE=1 -DMYSQL_DATADIR=/usr/local/mysql/data -DSYSCONFDIR=/etc/ \
+		    -DWITH_SSL=bundled -DENABLED_LOCAL_INFILE=1 -DWITH_INNOBASE_STORAGE_ENGINE=1 \
+		    -DWITH_BLACKHOLE_STORAGE_ENGINE=1 -DENABLE_DOWNLOADS=1
+		解释一下上面的参数:
+			DCMAKE_INSTALL_PREFIX:			安装位置
+			DMYSQL_UNIX_ADDR:				mysql.sock的存放位置(只有配置了才会自动产生mysql.sock文件,该文件是用来最初连接mysql用的).
+			DDEFAULT_CHARSET:				默认的字符编码
+			DDEFAULT_COLLATION:				默认的默认的排序规则
+			DWITH_EXTRA_CHARSETS:			指定其他可能使用的字符集
+			DWITH_PERFSCHEMA_STORAGE_ENGINE:
+			DWITH_FEDERATED_STORAGE_ENGINE:
+			DWITH_PARTITION_STORAGE_ENGINE:
+			DWITH_ARCHIVE_STORAGE_ENGINE:
+			DMYSQL_DATADIR:					指定数据库的存放位置
+			DSYSCONFDIR:					配置文件的目录
+			DWITH_SSL:						指定SSL的类型，从5.6.6开始默认bundled类型，此外也可以指定SSL库的路径地址
+			DENABLED_LOCAL_INFILE:			指定是否允许使用load data infile功能
+			DWITH_BLACKHOLE_STORAGE_ENGINE:
+			DENABLE_DOWNLOADS:
+			更多详情可看官网: http://dev.mysql.com/doc/refman/5.5/en/source-configuration-options.html
+	7:编译并安装
+		make
+		make install
+	8：初始化数据库
+		cd /usr/local/mysql/
+		./scripts/mysql_install_db --user=mysql --ldata=/usr/local/mysql/data
+		
+	9:改变权限
+		chown -R mysql:mysql .
+		chown -R root .
+		chown -R mysql data
+		这么做的原因是怕mysql被黑, 如果是用mysql是root权限, 那么黑客的权限就大了去了. 所以这里要改成mysql用户和组.
+			但是依然不是很清楚. 总感觉不仅仅是要增加mysql用户和组, 还要改变一下相应的权限, 而且应该是改变bin目录的权限为首要的吧.
+			而且在启动mysql的时候应该不能用root用户启动(mysql确实也强制了我们不能用root启动, 当然这个也可以改).
+	10:启动
+		四种启动方式:mysqld守护进程启动，mysqld_safe启动，mysql.server启动，mysqld_multi多实例启动。
+			注意点：mysql强制不让root启动(为了安全), 可以用--user=root来强制用某个用户来启动mysql。
+				也可以在my.cnf中配置,也行
+				[mysqld]
+				user=root
+			mysqld守护进程启动
+				进入bin   直接./mysqld即可.   可用./mysqld --help --verbose来查看可用的选项.
+					也可以这样:./mysqld --defaults-file=/etc/my.cnf --user=root  (指定配置文件以及强制用root启动mysql)
+				我们一般不这么启动:
+					这种方式如果启动失败的话，错误信息只会从终端输出，而不是记录在错误日志文件中，这样，如果mysql崩溃的话我们也不知道原因
+			
+			mysqld_safe启动
+				mysqld_safe是一个启动脚本，该脚本会调用mysqld启动，如果启动出错，会将错误信息记录到错误日志中，
+					mysqld_safe启动mysqld和monitor mysqld两个进程，这样如果出现mysqld进程异常终止的情况，mysqld_safe会重启mysqld进程。
+				启动方法: ./mysqld_safe &
+			
+			mysql.server启动
+				mysql.server同样是一个启动脚本，调用mysqld_safe脚本。它的执行文件在$MYSQL_BASE/share/mysql/mysql.server 和 support-files/mysql.server。 
+					主要用于系统的启动和关闭配置
+				启动方法： 
+					[root@test ~]# cp mysql-5.5.34/support-files/mysql.server /etc/init.d/mysql 
+					[root@test ~]# chmod u+x /etc/init.d/mysql 
+					[root@test ~]# service mysql start
+			多实例启动
+				不做详解
+	
+	11：停止：
+		1、使用 service 启动：service mysqld stop
+		2、使用 mysqld 脚本启动：/etc/inint.d/mysqld stop
+		3、mysqladmin shutdown
+	12：重启
+		1、使用 service 启动：service mysqld restart
+		2、使用 mysqld 脚本启动：/etc/inint.d/mysqld restart
+	
+	13：连接 登录
+		进入到bin目录下.
+		./mysql -u root  即可 
+		不需要密码直接进
+	
+	14：为了每次调用mysql方便点,要设置环境变量
+		在/etc/profile的末尾加上 export PATH=/usr/local/mysql/bin:${PATH}
+			. /etc/profile 即可
+		尝试了下在文件头部添加export PATH=/usr/local/mysql/bin,  其实从语法上来讲是可以的,但是PATH比较特殊可能系统在执行
+			profile的过程中会用到PATH的值, 而如果在前面就已经定义了, 就会引起系统说不明的错误.
+			
+	15：如果有限制root用户登录的IP的话:
+		shell> /usr/local/mysql/bin/mysql -e "grant all privileges on *.* to root@'127.0.0.1' identified by "root" with grant option;"
+		shell> /usr/local/mysql/bin/mysql -e "grant all privileges on *.* to root@'localhost' identified by "root" with grant option;"
+		# 开启远程登录(将host设为%即可)
+		/usr/local/mysql/bin/mysql -e "grant all privileges on *.* to root@'%' identified by "root" with grant option;"
+		
+mysql在linux下面的文件位置(RPM安装的默认的位置):
+	/var/lib/mysql/			mysql数据文件的存放位置
+	/usr/share/mysql		配置文件目录
+	/usr/bin/				相关命令(可执行文件)的目录
+	/etc/init.d/mysql/		启停相关脚本
+
+mysql主要文件:
+	log-bin： 二进制日志文件(主要做主从复制用的)
+	log-err:错误日志文件
+	查询日志文件:
+		
+	数据文件:
+		windows:
+			默认是:  mysql安装目录下/data.  有一个数据库如  lgr_test,就会有lgr_test文件夹. 
+		linux:
+			默认是: /var/lib/mysql
+		
+		MyISAM引擎:
+			该文件夹下, 每张表都对应有个   表名.frm文件.   表名.MYD   表名.MYI   
+			frm:表结构
+			MYD:数据
+			MYI:索引数据
+		InnoDB引擎：
+			innodb表没有没有MYD和MYI，其数据,索引文件对应于ibdata1文件中
+			ibdata1文件是跟lgr_test文件夹同级
+			

@@ -1,0 +1,35 @@
+1:mysql5.7可以支持json了, 而且可以支持虚拟列,让json中的字段用上索引.
+	而不是以前用blob的格式来存储json字符串,然后业务代码自己解析.
+	支持json,感觉在跟文档数据库叫板.
+	https://www.cnblogs.com/zoucaitou/p/4424575.html
+	
+	
+mysql的最大连接数
+	默认好像是100.
+	查看show variables like '%max_connections%';
+	那设置多少会合适呢?
+		应该是看具体的线上环境中被用到的连接数是否是逼近最大连接数.
+		正在使用的连接数:show global status like 'Max_used_connections';
+		https://www.jb51.net/article/51491.htm
+		当然如果应用超大连接数超大(连接毕竟是会耗内存), 那就超过了单机的负载又是另外一回事了.
+	阿里巴巴的DRDS宣称是不限制连接数的.不知道是怎么做到的?
+	
+阐述调优:
+	1:开启慢查询日志查看哪个sql慢.
+	2:找到慢sql就用explain来看是否有索引. 用show profile  XXX for query查看详细慢在哪个点.
+	3:调整SQL写法,或者调整索引. 或添加索引.
+	4:针对一些没法子的查询,比如连接上N张大表, 比如要在各个分表上进行查询, 比如表的变动很大.
+		因为关系型数据的设计原则问题, 面对这样的问题就无能为力. 
+		特别是这样的大表只发生了一些历史记录上, 且一般这样的SQL是用于查询.
+		所以这时候可以用mongodb或者redis介入(如果数据量很大的话, 还是用mongodb吧). 做一些冗余数据处理.
+		查询起来速度变得很快. 一般这部分数据是仅供查询的.详细见:MongoDB04_Base_summary.txt 最后总结的2.7点.
+	6:像count的处理. mongodb就特别快.  
+		mongodb用bson数据结构, 遍历数据也很快.  所以limit也会由于mysql.
+		mysql的MyISAM对于count也是很不赖的.
+		
+		关于模糊匹配的问题就交给solr, 数据量特别大的时候就很好用.
+		
+	7:表太大就先用mysql自带的分区功能. 不用动到业务代码.
+	8:再不行就考虑纵向分表
+	9:再不行就考虑横向分表. 
+	

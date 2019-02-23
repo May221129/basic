@@ -1,0 +1,157 @@
+	1： 单表索引测试   文章表
+		DROP TABLE IF EXISTS `article`;
+		CREATE TABLE `article` (
+		  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+		  `author_id` int(11) unsigned NOT NULL,
+		  `category_id` int(11) unsigned NOT NULL,
+		  `view` int(11) unsigned NOT NULL,
+		  `comments` int(11) unsigned NOT NULL,
+		  `title` varchar(255) NOT NULL,
+		  `content` text NOT NULL,
+		  PRIMARY KEY (`id`),
+		  KEY `idx_article_ccv` (`category_id`,`comments`,`view`)
+		) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+		
+		-- ----------------------------
+		-- Records of article
+		-- ----------------------------
+		INSERT INTO `article` VALUES ('1', '1', '1', '1', '1', '1', '1');
+		INSERT INTO `article` VALUES ('2', '2', '2', '2', '2', '2', '3');
+		INSERT INTO `article` VALUES ('3', '1', '1', '3', '3', '3', '3');
+	
+	2：测试连表    两张表的sql  创建索引   一个是class 类型表     book是书本表    没有用主键做关联. 而是用了card字段做关联
+		CREATE TABLE IF NOT EXISTS `class`(
+			`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+			`card` INT(11) UNSIGNED NOT NULL,
+			PRIMARY KEY(`id`)
+		);
+		
+		CREATE TABLE IF NOT EXISTS `book`(
+			`bookid` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+			`card` INT(11) UNSIGNED NOT NULL,
+			PRIMARY KEY(`bookid`)
+		);
+		
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		insert into class (card) values(FLOOR(1 + (RAND() * 20)));
+		
+		
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		insert into book(card) values(FLOOR(1 + (RAND() * 20)));
+		
+	3：为了测试三张表连接查询的优化:  跟2点中的两张表一起用
+		CREATE TABLE IF NOT EXISTS `phone`(
+			`phoneid` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+			`card`	INT(11) UNSIGNED NOT NULL,
+			PRIMARY KEY (`phoneid`)
+		)ENGINE=INNODB;
+		
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+		INSERT INTO phone(card) VALUES(FLOOR(1 + (RAND() *20)));
+	
+	4: 测试索引失效搞的一张员工表.
+		CREATE TABLE `staffs`(
+			`id` INT (11)  PRIMARY KEY AUTO_INCREMENT,
+			`name` VARCHAR(24) NOT NULL DEFAULT'' COMMENT'姓名',
+			`age`	INT NOT NULL DEFAULT 0 COMMENT'年龄',
+			`pos` VARCHAR(20) NOT NULL DEFAULT'' COMMENT '职位',
+			`add_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入职时间'
+		)CHARSET utf8 COMMENT'员工记录表';
+		
+		INSERT INTO staffs(name, age, pos,add_time) VALUES('张三', 22, '程序员', NOW());
+		INSERT INTO staffs(name, age, pos,add_time) VALUES('李四', 23, '程序员', NOW());
+		INSERT INTO staffs(name, age, pos,add_time) VALUES('王五', 25, '程序员', NOW());
+		
+		INSERT INTO staffs(name, age, pos,add_time) VALUES('狗蛋', 24, '产品经理', NOW());
+		INSERT INTO staffs(name, age, pos,add_time) VALUES('儿子', 26, '产品经理', NOW());
+		INSERT INTO staffs(name, age, pos,add_time) VALUES('老子', 28, '产品经理', NOW());
+		
+	5: student表  做show profile调优用
+		CREATE TABLE `student` (
+		  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+		  `name` varchar(32) NOT NULL DEFAULT '',
+		  `age` int(11) NOT NULL DEFAULT '0',
+		  `tel` varchar(15) NOT NULL DEFAULT '',
+		  `address` varchar(128) NOT NULL DEFAULT '',
+		  `grade` int(11) NOT NULL DEFAULT '0',
+		  `status` int(11) NOT NULL DEFAULT '0',
+		  `createtime` bigint(20) NOT NULL DEFAULT '0',
+		  `updatetime` bigint(20) NOT NULL DEFAULT '0',
+		  `class_id` int(11) NOT NULL DEFAULT '0',
+		  PRIMARY KEY (`id`)
+		) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+		
+		对应的班级表:
+		CREATE TABLE `student_class` (
+		  `id` int(11) NOT NULL AUTO_INCREMENT,
+		  `classname` varchar(16) NOT NULL DEFAULT '',
+		  `ranking` int(11) NOT NULL DEFAULT '0',
+		  PRIMARY KEY (`id`)
+		) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+	
+	     
+	     
+	     
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	

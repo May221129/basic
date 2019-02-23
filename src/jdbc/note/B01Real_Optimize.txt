@@ -1,0 +1,276 @@
+1:left join 实例:
+
+	explain select FROM_UNIXTIME(reg.reg_time/1000, '%Y-%m-%d') as time,reg.regcha_code, '' as regcha_name, count(*)
+		from meb_info mi left join meb_log_reg reg on(mi.uid = reg.uid)
+		where mi.system_id='20170822121036292337881293278169' and type=10 and reg.reg_time >= 1498621579000 and reg.reg_time <= 1502786774500
+		group by time,reg.regcha_code;
+		
+		在只有uid索引的时候, 或者有tdx_mebinfo_systype on meb_info(system_id, type);
+			mi  all,  	Using temporary; Using filesort
+			reg eq_ref
+		建立索引create index tdx_mebinfo_systypeuid on meb_info(system_id, type, uid);
+			mi  变成了ref  可喜可贺
+		
+		以上例子无法避免大表扫描, 因为两张表都是大表.
+		在做连表操作的时候, 将连接字段和驱动表的查询字段做组合索引,  那么驱动表就可以避免全表扫描.
+		我将join  改成  非join的方式,  效果一样.   不知道其他例子中改成非join的情况是怎么样的
+		
+2:limit 优化:
+	select * from student limit 2000000,10;  
+		2.35秒
+		+----+-------------+---------+------+---------------+------+---------+------+----------+-------+
+		| id | select_type | table   | type | possible_keys | key  | key_len | ref  | rows     | Extra |
+		+----+-------------+---------+------+---------------+------+---------+------+----------+-------+
+		|  1 | SIMPLE      | student | ALL  | NULL          | NULL | NULL    | NULL | 10000116 |       |
+		+----+-------------+---------+------+---------------+------+---------+------+----------+-------+
+	select * from student where id > (select id from student order by id limit 2000000,1) limit 10;
+		2.02秒
+		+----+-------------+---------+-------+---------------+---------+---------+------+---------+-------------+
+		| id | select_type | table   | type  | possible_keys | key     | key_len | ref  | rows    | Extra       |
+		+----+-------------+---------+-------+---------------+---------+---------+------+---------+-------------+
+		|  1 | PRIMARY     | student | range | PRIMARY       | PRIMARY | 8       | NULL | 5000058 | Using where |
+		|  2 | SUBQUERY    | student | index | NULL          | PRIMARY | 8       | NULL | 2000001 | Using index |
+		+----+-------------+---------+-------+---------------+---------+---------+------+---------+-------------+
+	select * from student s inner join (select id from student order by id limit 2000000,10) as s2 on(s2.id = s.id);
+		2.20秒
+		+----+-------------+------------+--------+---------------+---------+---------+-------+---------+-------------+
+		| id | select_type | table      | type   | possible_keys | key     | key_len | ref   | rows    | Extra       |
+		+----+-------------+------------+--------+---------------+---------+---------+-------+---------+-------------+
+		|  1 | PRIMARY     | <derived2> | ALL    | NULL          | NULL    | NULL    | NULL  |      10 |             |
+		|  1 | PRIMARY     | s          | eq_ref | PRIMARY       | PRIMARY | 8       | s2.id |       1 |             |
+		|  2 | DERIVED     | student    | index  | NULL          | PRIMARY | 8       | NULL  | 2000010 | Using index |
+		+----+-------------+------------+--------+---------------+---------+---------+-------+---------+-------------+
+	
+	
+	
+	select * from meb_log_reg limit 2000000,10;
+		3.94 sec
+	select * from meb_log_reg where id > (select id from meb_log_reg order by id limit 2000000,1) limit 10;
+		1.33 sec
+	select * from meb_log_reg reg inner join (select id from meb_log_reg order by id limit 2000000,10) as temp on(reg.id = temp.id);
+	 	1.35 sec
+	
+	优化思想:
+		不用索引的话, type就是all, 应该就遍历数据行.
+		优化后的话, 先遍历索引(用上覆盖索引), 然后将得到的结果用于条件查找.  
+			两次检索, 第二次时间忽略不计, 关键是第一次检索的时间. 如果能比直接数据行的速度快的话, 就那优化成功.
+		
+	奇怪: 两个测试不一样. 
+		对了,  主键类型不同的时候的测试好像还没定论???
+		以上会不会是因为主键的类型不同而产生了相同的优化手段,  有些起效  而有些不起效.  毕竟用字符串去逐个比较和用数字去逐个比较是好几个数量级的差别.
+		而且，在本机上也用同样的优化方式优化meb_log_reg表, 也是没有什么效果的.  感觉是不是跟环境有关? 比如key_buffer? 
+			在本机上第一个查询耗时很多(扫索引 type index), 第二个基本不耗 
+	select * from meb_log_reg where id > (select id from meb_log_reg limit 2000000,1) limit 10;
+		效果差不多.
+		explain 不一样的地方是  有order by id的时候  两行的key都是主键. 
+		没有  order by id的时候  子查询的key是uid:
+		猜测原因: uid这棵索引树下面是有主键列集合的,  一直计数到2000000, 取到id, 然后到聚簇索引检索.
+			所以大胆猜测, 如果uid相同的比较多. 效率会快起来.
+		
+	在本机做测试的时候
+		select * from meb_log_reg limit 2000000,10;
+			3.2 sec
+		select * from meb_log_reg where id > (select id from meb_log_reg order by id limit 2000000,1) limit 10;
+			2.6 sec
+			
+		是不是因为机器的cpu和内存关系导致测试结果不一样
+	
+	关于limit调优: 总结一句, 傻逼  现实中哪里会这么搞  怎么可能会从两百万行开始拿数据, 要转换一下思想和场景
+	
+3:多张连表. 
+	每张表都有建立相应的索引, 
+	mysql会自动的使用上那些索引. on和where一起用上.
+	可以强制使用 force index()   也可以强制不使用  ignore index() 
+	
+4: count(*) 优化:
+	http://mysql.taobao.org/monthly/2016/06/10/
+	该文章没有明确的指出怎么优化count(*)
+	mysql5.7有新的计数函数,不知道其效果怎么样, 罗列了其优点
+	测试的时候需要把buffer pool清空(不是cache.)  这是一个重点, buffer的作用.
+	select count(*) from sbtest1 force index(k_1);强制索引
+	select count(*) from sbtest1 where k > 0; count(*)使用的索引是比较小的时候会快.
+	
+	以上这些都需要深究
+
+5:count(*)优化
+	因为MyISAM会保存表的具体行数，因此这段代码在MyISAM存储引擎中执行，MyISAM只要简单地读出保存好的行数即可。因此，如果表中没有使用事务之类的操作，这是最好的优化方案。然而，InnoDB存储引擎不会保存表的具体行数，
+		因此，在InnoDB存储引擎中执行这段代码，InnoDB要扫描一遍整个表来计算有多少行。
+	
+	select count(*) from meb_log_reg;  key是uid
+		12秒左右
+	SELECT COUNT(*) AS count1 FROM ( SELECT id,uid,operate_system,os_version,regcha_code,channel_version, phone_type,imei_code,longitude,latitude,ip,canton_code,reg_time,device_name FROM meb_log_reg mlr WHERE mlr.isvalid = 1  ) AS t1;
+		8秒多
+	SELECT COUNT(*) AS count1 FROM ( SELECT id FROM meb_log_reg mlr WHERE mlr.isvalid = 1  ) AS t1;
+		6.2
+	select count(*) from meb_log_reg force index(PRIMARY);
+		5秒多
+	force index(PRIMARY);是强制使用聚簇索引  好像  也可以  where id>0(当然id是int 自增的)
+	
+	还有声音:索引越小  速度越快. 之前做的实验也说明了字段越小越快
+	
+	疑惑点: 聚簇索引和普通索引 哪个快    还是说  只是小的快?
+		
+6:关于磁盘读取方面的说法:
+	一般来说，索引本身也很大，不可能全部存储在内存中，因此索引往往以索引文件的形式存储在磁盘上。那么数据库在构建索引的时候就需要先从磁盘读取数据了，此时就要产生磁盘I/O消耗。而每次的数据读取，都要经历寻道时间、旋转延迟、传输时间三个部分。寻道时间是指磁臂移动到指定磁道所需要的时间，一般在5ms以内；旋转延迟就是磁盘转速；传输时间指的是将数据从磁盘读出并写入到内存的时间，这个时间较短，可以忽略不计。相对于内存存取，I/O存取的消耗要高几个数量级。因此，评价一个数据结构作为索引的优劣最重要的指标就是查找过程中磁盘I/O操作次数的渐进复杂度。换句话说，索引的结构组织要尽量减少查找过程中磁盘I/O的存取次数。
+	从上面的描述可以得知磁盘I/O是非常高昂的操作，根据操作系统的局部性原理：
+	当一个数据被用到时，其附近的数据也通常会马上被使用。
+	计算机操作系统在这方面做了一些优化，当一次I/O时，不光把当前磁盘地址的数据读取到内存缓冲区内，而且把相邻的数据也都读取到内存缓冲区内。这样一来，在读取数据时产生的I/O就少了很多了。因为在数据库中，每一次I/O读取的数据我们称之为一页(page)，一般为4k或8k，也就是说，我们读取一页内的数据时，实际上才发生了一次I/O。
+	根据以上的描述，我们可以初步得出结论，增加索引前后的性能差距体现在磁盘读取过程。但是在添加新的索引之前，我是添加了一个唯一索引的，后来发现在mysql中，我添加的唯一索引被称为聚簇索引，而后面添加的索引称为辅助索引，因此，让我们再来看看聚簇索引和辅助索引的区别。
+	
+7:explain SELECT count(*) FROM meb_log_reg mlr WHERE reg_time > 1502962248795;
+	select 后面 跟 id uid  reg_time, count(*)随便怎么组合或者单一出现,  type都是range
+	单出现其他的字段你的时候, 就是all  不知道怎么搞
+	当>号改成=的时候就不会出现这么奇怪的现象.
+	explain SELECT ip FROM meb_log_reg mlr force index(mreg_rtimeuid_nor) WHERE reg_time > 1502962248795;
+		可以强制让它使用索引
+8：
+	explain SELECT * FROM meb_log_reg mlr force index (mreg_rtime_nor) WHERE reg_time between 1502693322315 and 1503914780782;
+		19秒		type是range
+	explain SELECT * FROM meb_log_reg mlr WHERE reg_time between 1502693322315 and 1503914780782;
+		9秒		type是all
+	以上两行证明:索引的随机IO(全表扫)肯定比全表扫的顺序IO慢.
+	
+	SELECT * FROM meb_log_reg mlr WHERE reg_time between 1502693322315 and 1503914780782;
+		9秒
+	SELECT id FROM meb_log_reg mlr force index (mreg_rtime_nor) WHERE reg_time between 1502693322315 and 1503914780782;
+		3秒		
+	以上两行证明索引覆盖棒棒哒
+	
+	SELECT * FROM meb_log_reg mlr WHERE reg_time between 1502693322315 and 1503914780782;
+		9
+	SELECT * FROM meb_log_reg mlr WHERE reg_time between 1502693322315 and 1503914780782 order by reg_time desc;
+		29
+	这两行都是all. 只是因为有了filesort.   filesort不可小看
+		
+10：
+	select count(*) from meb_log_reg force index (mreg_rtimeregcha_nor);
+		8.3秒
+	select count(*) from meb_log_reg force index(PRIMARY);
+		5秒
+	用的索引不同 带来的差异
+
+11:
+	sql1:select count(*) from meb_log_reg where reg_time between 1502693322315 and 1502702684395 and isvalid = 1;
+	sql2:select count(*) from meb_log_reg where reg_time between 1502693322315 and  1502985796049;	
+	sql·没有用到索引  sql2有用到.   首先这点就让我蛋疼，  我觉得slq1应该就可以用到的.  因为mysql会自动的判别是否应该用索引(加了个条件,可能会using index condition 更费).
+	
+			368w	177w	87w		38w		11w
+	sql1	5秒		5秒		5秒		5秒		0.18
+	sql2	8秒		3.6秒	1.5秒	0.2		0.09秒
+	
+	
+	第九点的实验感觉还有比较多的干扰因素, 但是这个实验的干扰因素就少的多,  就比较符合我的猜想.  sql1就是全表扫描所以时间比较稳.  但是11w的时候急剧下降不懂怎么回事  
+
+12:用MyIsam引擎来搞:
+	select count(*) from meb_log_reg;
+		0.00秒			InnoDB:11.18秒 type用的uid
+		无条件count 炒鸡快
+	select count(*) from meb_log_reg order by reg_time desc;
+		0.8秒			InnoDB:5.2秒	type用的主键
+		加上排序就慢
+	SELECT count(*) FROM meb_log_reg mlr WHERE reg_time between 1502693322315 and 1503914780782;
+		0.9秒			InnoDB:5秒	type用的组合索引
+		时间范围是全范围的.  如果范围小一点, 速度会更快
+		条件越多, 速度也就越慢
+	SELECT count(*) FROM meb_log_reg mlr force index (mreg_rtimeregcha_nor) WHERE reg_time between 1502693322315 and 1503914780782;
+		0.96秒			InnoDB:4.43秒
+		用索引, 且覆盖索引
+	SELECT count(*) FROM meb_log_reg mlr force index (mreg_rtimeregcha_nor) WHERE mlr.isvalid = 1  AND reg_time between 1502693322315 and 1503914780782;
+		10.23秒			InnoDB:13.87秒   看来要看重一下 Using index condition了  
+		不是using index 而是 Using index condition导致IO多了起来, 慢了
+	SELECT count(*) FROM meb_log_reg mlr  WHERE mlr.isvalid = 1  AND reg_time between 1502693322315 and 1503914780782;
+		1.14秒			InnoDB:5.07秒
+		type是all   干脆没有用索引.  反而炒鸡快.
+	SELECT COUNT(*) AS count1 FROM ( SELECT id,uid,operate_system,os_version,regcha_code,channel_version, phone_type,imei_code,longitude,latitude,ip,canton_code,reg_time,device_name FROM myisam_meb_log_reg mlr WHERE mlr.isvalid = 1  AND reg_time between 1502693322315 and 1502985770166  order by reg_time desc ) AS t1;
+		9.26秒   			InnoDB:16秒
+		
+	MyISAM  count(*)总结:
+		没条件的时候几乎不费时间, 是因为可以直接取行记录数.
+		当有条件的时候,行记录数是不管用的, 但是还是比InnoDB快. 不知道其怎么实现的.
+		
+12:
+	SELECT count(*) FROM meb_log_login mll WHERE 1 = 1  AND login_time between 1502693322315 and 1503914780782;
+		1.2秒
+	SELECT count(*) FROM meb_log_reg mlr WHERE 1 = 1  AND reg_time between 1502693322315 and 1503914780782;
+		4.9秒
+	这两个表基本是相同的,  不知道为什么会出现这样的差距.
+	
+	我猜是不是索引类型的问题(单值索引, 组合索引,  varchar类型还是int类型)
+	SELECT count(*) FROM meb_log_login mll WHERE 1 = 1
+	SELECT count(*) FROM meb_log_reg mlr WHERE 1 = 1
+	执行这两行  去explain, 更能知道肯定是索引类型的问题. 
+		猜想:绝佳组合是聚簇索引且是int类型的, 是最快的.
+	不使用索引的命令是 SELECT * FROM TABLE1 IGNORE INDEX (FIELD1, FIELD2) …
+
+13:
+	神屌 :
+	SELECT COUNT(*) AS count1 FROM ( 
+		SELECT mi.uid,mip.tel,mip.nickname,mip.realname,mi.system_id,mi.`status`,sys.name as system_name, sys.code as system_code 
+			from sys_system sys INNER JOIN meb_info mi on (sys.id=mi.system_id) INNER JOIN meb_info_per mip ON mi.uid = mip.uid INNER JOIN meb_log_reg reg on(reg.uid=mi.uid) 
+				WHERE  mi.type = 10  AND  mi.system_id = '20170810011419096632898397738212'  AND  mi.status = '1'  AND  reg.reg_time >= 1502693322315  AND  reg.reg_time <= 1502793716999  
+					order by reg.reg_time desc 
+	) AS t1;
+	reg_time这个条件的范围不同, 居然会导致查表顺序变化, 已经使用索引的变化.
+	mysql超级屌,实时都在关注谁是驱动表
+
+14：count(*) 优化之用哪个索引比较快.
+	本以为是聚簇索引+类型小就是最快的.
+	然后实验student表.  发现用createtime索引居然比聚簇索引快.  
+	都是bigint,很是奇怪. 
+	后发现, createtime都很多相同值.  而id都是不同值.   这是什么原因呢? 试想想它的数据结构及其实现方法。。。。(猜想:二级索引的叶子节点有一级索引值集合)
+	
+	student:select count(*) from student force index(PRIMARY);
+		主键是bigint,  3秒左右. 360w数据
+	meb_log_reg:select count(*) from meb_log_reg force index(PRIMARY);
+		主键是varchar,  5秒左右. 360w数据
+	
+	
+总结:
+	1:判断谁是驱动表或者说在多个join语句中判断谁先执行谁后执行没有那么简单.
+		感觉:在简单环境中,会如note笔记中讲的那样 用left right join或者用inner 索引就可以判断.
+		但是实际上的情况往往更加复杂.  mysql会自动的帮我们调整查询表的顺序,  甚至当使用的条件变化,或者
+		条件的取值范围产生变化的时候, 查询表的顺序都会变化.  真心不好琢磨.
+		所以想要使用什么索引的时候 强制去用就可以 force index(),  ignore index() 
+		
+	2：在使用索引上也是规则多多
+		type是range的时候
+			可能会因为范围太大, mysql会自动不使用索引.
+			在范围条件后面或者前面再加一个条件的时候, type就是all.  但是有些时候又是可以的.照理说应是range的
+		猜测: 因为使用索引有两方面:
+			查找快, 费IO。  这两个东西会有一个平衡点.
+			例子1: where age>25  当值是25以上,mysql判断使用的索引才是值得的. 不然条件不能过滤大量数据, 反而IO加重.
+			例子2: select col1, col2, col3 from aaa where col1 >n;
+				当col1, col2, col3不在索引范围内. 就不能使用覆盖索引, 如果不能使用覆盖索引, 就会产生更多的io.
+				mysql就可能会判定直接不使用索引.
+			例子3：在where age>25  然后再加一个条件,可能就用不上索引了.(加了个条件,可能会using index condition 更费).
+			
+	4:二级索引到一级索引再到数据:
+		猜想:感觉二级索引的叶子节点有一级索引的集合.
+			使用索引覆盖技术的时候, 在select列中才可以出现主键列.
+			count(*)的时候, 比如createtime相同的试试, 速度才越快.  以为不同的越多, 就说明要进行更多的查找.
+				感觉count操作的时候就是找到一个createtime,然后就累加其叶子节点中的主键列集合的长度.
+	
+	5：limit调优可以看上面的第二点		
+			
+	6: 有些查询第一次查询好慢.  不是查询缓存的锅. 不知道怎么回事
+		应该跟mysql的内存管理有关. https://www.2cto.com/database/201604/497862.html
+		热数据巴拉巴拉的. http://www.linuxidc.com/Linux/2012-07/66262.htm
+		
+	7:关于count(*)优化
+		不用索引和使用字符串主键索引的速度差不多.
+		使用的索引的类型越小越快.
+		使用索引的值重复数越高越好.
+		select count(*) from meb_log_reg; mysql优化器会自动选择索引(索引类型比较小的)
+	
+	8:随机IO  VS   顺序IO
+		如果是count(*),或者是索引覆盖那种, 就不会涉及大量大块的IO, 就不提了.
+		像select col1,col2,col3...... from tablename where ... 会具体打到数据行的.
+			随机IO和顺序IO的差别就比较明显.
+		例子可看总结前的第八点.
+		
+	9：MyISAM count(*) 看11点.
+		
+		
+		
+	
+	

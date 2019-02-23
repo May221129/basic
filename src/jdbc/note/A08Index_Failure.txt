@@ -1,0 +1,103 @@
+防止索引失效:
+	note_sql中的 第四点的sql   一张staffs表
+	
+	1:索引能用到的值越多(explain len列), 查找就越精确.  
+		包括组合索引, like等.
+		比如: 组合索引 a_b  如果where a= '' and b = ''; 比where a = ''会查找得更快.
+		这里指的len越大越精确值得是索引的值被用上越多越好,  而不是明明可以用int结果用上varchar导致索引变大,那只会拖慢数据库.
+		
+	2:最佳左前缀法则
+		组合索引a_b_c的情况下:
+			where a = '' and b = '' and c = ''; 最能标识一条记录, 查找得最快.
+			where a = '' and b = ''; 能用上组合索引的a 和 b的部分.
+			where a = '' and c = ''; 那么只能用组合索引的a部分.
+			where b = ''; 如果不以a开头,  那么就无法用上该组合索引.
+			
+			-----以下情况虽然a不打头, 但是因为组合索引的字段全部用上了, 所以也都ok， 看来mysql还是挺聪明的.
+			where a = ''  and c = '' and b = '';  组合索引全部有效
+			where c = ''  and a = '' and b = '';  组合索引全部有效
+			这里为什么是对的呢? 是因为mysql有自己的优化器, 会翻译成跟索引一样的顺序, 
+				但是在实际用的时候, 最好还是依照索引的顺序来搞, 没必要让优化器耗在这样的东西上, 
+				又或者说我们也不确定优化器哪天就不是我们认识的那个优化器了, 所以还是老实点.
+			
+		like查询的情况下:
+			like 'sss%' 这样是可以用到索引的, 以sss开头,  如果是'%sss', 前面的字符是%的时候就用不到索引.
+			like 'sss%' type是range, 且跟在后面的字段是索引的话还是可以被用上.(不像接下来第4点讲的范围).
+			like这感觉有点像范围. 
+			如果生产环境中必须要用%ss%的话,  那我们只能控制select的列落在覆盖索引上面，那么type还可以是index.
+				如果人家要的字段就是要那么多， 无法落入覆盖索引的范围内，那神都救不了了。
+			
+			like 'ss%ss%' 这种情况跟like 'sss%'一样.
+			
+			
+	3: 不在索引列上做任何操作(计算, 函数, (自动or手动)类型装换),会导致索引失效而转向全表扫描
+		select * from staffs where name = '张三'; 可以用到索引name
+		select * from staffs where left(name, 2) = '张三'; 用不上索引.
+			因为索引树是针对name字段而建立的,  如果对该字段用了函数或者类型转换, 那么搜索的实际上就不是该字段,
+			而是经过函数或者类型转换后的新的字段, 而新的字段没有建立索引树.
+	
+	4: 存储引擎不能使用索引中范围条件右边的列.(范围之后全失效)
+		建立索引 tdx_staffs_nap;  name age pos三列的组合索引
+		select * from staffs where name = 's' and age = 1 and pos = 'd';
+			组合索引的三列全部用上了.
+		select * from staffs where name = 's' and age > 22 and pos = 'd';
+			因为age用的是大于号.  导致原本的type是ref变成了range.
+			name age都用上了,  但是  pos没用上.  也就是范围之后全失效的意思.
+		
+		如果pos是int类型的:	
+			select * from staffs where name = 's' and pos > 22 and age = 5;
+			这样的情况下也是全部都用到. 因为优化器会让其编程 name='s' and age = 5 and pos > 22;
+			优化器能优化的原因是组合索引的三个值都出现了. 第二大点也是优化器在大显神功.
+			
+		疑问点: staffs表
+			建立age, add_time索引:
+			explain select * from staffs where age > 3; 索引失效  all
+			explain select * from staffs where age > 25; 索引用上了  range. 
+				只要大于24以上索引才能用得上.
+	5: 尽量使用覆盖索引, 避免用select * ,   仅仅拿需要即可.
+		1：explain select * from staffs where name = 's' and age = 2 and pos = 's';
+			没有索引覆盖. 
+		2:explain select name, age, pos from staffs where name = 's' and age = 2 and pos = 's';
+			有索引覆盖
+		3:explain select  age, pos from staffs where name = 's' and age = 2 and pos = 's';
+			只有select的列仅仅包含组合索引的列(无所谓个数和顺序), 就能用上索引覆盖.
+		4:explain select name, age, pos, add_time from staffs where name = 's' and age = 2 and pos = 's';
+			掺杂了组合索引的其他列, 就不能用索引覆盖了.
+		
+		5:在老师的举例中, 以上第四大点说的范围之后全失效.  只要将*改成覆盖索引, range就可以神奇的变成 ref, 
+			但是我自己测试的时候, 依然还是range , 可能是版本不同吧.
+		
+		6: 除了该组合中的所有字段, 还能有一个能掺杂进去的， 那就是主键.   (必须是主键, 其他索引掺杂进去也是不行的.)
+	6: 使用 != 或者 <>导致无法使用索引.
+		想象一下索引碰到 ！=这个命令的懵逼的表情.
+		网上说修改成: where age < 10 or age > 10就可以了
+		但是经测试依然是不行的.
+		所以说: 如果有这种环境必须得这么搞，那还真的没办法了.
+		
+	7: is null, is not null也无法使用索引
+		只能在申明表的时候, 设定该字段是not null的 有默认值.
+		explain .... where name is null:
+			结果是好多字段全是null.
+		explain .... where name is not null;
+			type是all,  key 是null.
+		不清楚is null 和  is not null 这两的性能差多少.  估计都是全表扫吧.
+	
+	8:字符串不加单引号 索引失效.
+		有时候我们会写  id = 3135135135; 即使id是varchar类型的也是能成功的.  因为数据库底层会把id从字符串转成number.
+			这样索引就失效了, 所以, 不要随意写， 增加数据库的负担，且索引都可能会失效
+	
+	
+	9:少用or, 用它来连接的时候会导致索引失效.(下面是错误总结)
+		explain select * from staffs where name = 's' or name = 'sss';
+			type是all, 没有用到索引.
+		为什么or会导致索引失效. 每次索引只能用一种:
+			or的两边是不同列:如果 col1 = 1 or col2 = 4, 就算col1用上了索引, 但是col2肯定用不上,还是得全表扫描.
+				如果是and的话, col1用上索引塞选出来的行,再进行col2判断,这是符合逻辑的. 但是用or就不行(或的关系).
+			or的两边是相同列:如果是单值索引是没问题的. 	
+				用这个索引找两次即可.(有些时候还是不行)
+			or的两边是相同列:如果是组合索引就有问题了.
+				组合索引也是一颗索引树. 两列最终也会计算成一个数值. 用组合索引的第一列还是可以用上该索引的一部分(感觉mysql只用上组合索引的一部分的时候应该是范围查找).
+				如果用or的话好像就不行了
+		以上总结都是屁话,并不全对, 实际上有索引合并优化:index_merge,详细看下面的博客和官方文档.
+		https://segmentfault.com/q/1010000005766646
+		https://dev.mysql.com/doc/refman/5.6/en/index-merge-optimization.html

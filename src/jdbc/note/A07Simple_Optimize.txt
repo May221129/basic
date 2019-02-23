@@ -1,0 +1,66 @@
+以下结论有些并不全面
+
+实践:
+	单表优化:
+		article 文章表:
+		note_sql.txt.1 的sql
+		
+			查询:种类 category_id = 1, 评论大于 1 comments > 1  且 被看最多 view最大
+			
+			select * from article where category_id = 1 and comments > 1 order by view desc limit 1;
+				结果是all，  且有filesort	
+			给category_id comments view创建组合索引
+				结果是range, 不过依然有filesort.
+				原因: comments>1 导致组合索引只能用到category=1,  到comments>1的时候被掐断了, 所以 view也就没法用了.
+					当然了如果单独一个索引的话,是可以使用>这样的比较的.	
+			解决办法: 只建立 category_id和view的组合索引就好.  type为ref   也没有filesort。
+	
+	连表查询(两张表):
+		note_sql.txt.2 的sql   class表(类别)和book表(书本), 关联字段不是用主键来做， 而是用两个表都有的card字段.
+			1:两个表除了主键之外没有索引,且没有用到主键
+				explain select * from class c left join book b on (c.card = b.card);
+				先class表， type是all
+				在book表， type是all
+			2:create index tdx_book_card on book(card); 在book中建立了索引.
+				explain select * from class c left join book b on (c.card = b.card);
+				先class表 	type是all
+				再book表 	type是ref  		extra 是  using index
+					using index的原因: 可以想象先查class全部, 然后去拿着card去book表里面找card和id， 索引覆盖.
+			3:同2一样的索引: 以下从left join 改成  right join 
+				explain select * from class c right join book b on (c.card = b.card);
+				先book  	type是index  	extra 是using index
+				再class 		type是all.		extra 是using join buffer
+				解释: 先查book表的全部, 索引就没什么卵用, 不过刚好查的字段是覆盖索引， 所以是index,  然后再去找class的时候就all了
+			4：不加索引的时候:explain select * from class c inner join book b on (c.card = b.card);
+				先 b 后 c. b是18条，  c是20条.
+				先c 后  b  b是18条, c是17条.
+				总结: 也就是说   在inner join连表查询的时候   哪张表示小表那么它就是驱动表.
+					注意点: 连表的关联字段可不能是主键, 是主键的话当然就算是索引~
+			5:建立索引的时候, inner join 谁是驱动表.
+				当把索引建立在b表的时候,  	那么c就是驱动表.
+				当把索引建立在c表的时候,	那么b就是驱动表.
+			6：总结: 
+				6.1： left/right join的情况下， 谁是驱动表就看该表在其左边或者右边.
+					然后我们要把索引建立在非驱动表上.
+				6.2: inner join的情况下. 
+						没有索引: 	表的记录少的就是驱动表.
+						有索引: 	没有索引的那张表就是驱动表.   
+					inner join 判断谁是驱动表的逻辑还是挺智能的.
+						注意点: 连表的关联字段可不能是主键, 是主键的话当然就算是索引~
+				6.3 left/right 	需要我们去判断索引建立在哪一方(非驱动方)
+					inner 		不需要我们去判断索引建立在哪一方， 因为它会自动建立了索引的那张表成为非驱动方.
+	连表查询(三张表):	
+		在上面已经建好了两张表的前提下再建立一张. 在note_sql的第三点的sql.
+			1: 	三张表的inner join 无索引的情况下,  跟以上结论一样, 表小的当驱动表.
+			2:	在两个表内建立关联字段的索引, 那剩下的那张表就成了驱动表.
+			3:	left/right的规则也是和前面的规则和注意点一样, 所以如果sql是:
+				select * from class c inner join book b on(c.card = b.card) left join phone p on(p.card = b.card);
+				那么就应该在b 和 c 建立关联字段的索引.   效果就是  all ref ref
+			4： 	注意点
+					4.1 join不要太多, 毕竟是嵌套循环, 嵌套起来要命的.
+					4.2   在连表的时候  要小表驱动大表.
+					4.3   优先优化内层循环.  
+					4.4	保证被驱动表的关联字段要建立索引
+					4.5	如果真的无法保证被驱动表的关联字段没有建立索引的时候, 不要吝啬内存，可以join buffer设置大一点. 
+							疑问点: join buffer这个东西怎么起作用的.
+

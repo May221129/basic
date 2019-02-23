@@ -1,0 +1,49 @@
+慢查询日志:
+	1: 概述:
+		Mysql的慢查询日志是mysql提供的一种日志记录, 它用来记录在mysql中相应时间超过阈值的语句,具体指运行时间
+			超过long_query_time值的sql, 则会被记录在慢查询日志中.
+		long_query_time的默认值是10,  也就是超过10秒的sql会被记录到日志中.
+		默认情况,mysql是没有开启慢查询的, 因为或多或少会损耗性能. 所以需要我们手动去开启. (非调优情况下, 就不建议开启.)
+	2:基本命令
+		2.1:查询是否开启和日志位置:
+			SHOW VARIABLES LIKE '%slow_query_log%';
+		2.2:开启慢查询日志
+			set global slow_query_log = 1;
+			mysql重启后悔失效. 当然了, 像这样的配置的话, 也可以不用写到配置文件中, 因为并非是一直要开启的功能.
+			写到配置文件的方法(windows):
+				my.ini下面 [mysqld]下面增加:
+				slow_query_log=1
+				slow_query_log_file=d:/mysql/slow_query.log
+				slow_query_log_file的默认路径是: D:\tool\mysql-5.6.24-winx64\data\hostname-slow.log
+		2.3:查询/配置慢查询时间阈值
+			查询:SHOW VARIABLES LIKE '%long_query_time%'; 默认10秒. 注意是>会被记录, 而非>=.
+			设置:SET GLOBAL long_query_time=3;
+				改完之后再查看一遍,结果发现没改变:  需要重新连接或者新开一个回话才能看到修改值.(关掉dos窗口再开一次).
+			当然也可以在配置文件里面配置 long_query_time=3; 就永久生效了.
+		2.4:测试:
+			select sleep(4);
+			查看慢查询日志就会发现很多信息, 使用的数据, 查询总时间, 锁时间, 发送了多少行, 检查了多少行, 对应的sql等信息.
+		2.5:查询慢查询的总条数:
+			SHOW GLOBAL STATUS LIKE 'slow_queries';
+		2.6:生产环境中, 慢查询日志可能有非常多, 所以需要一个分析工具----mysqldumpslow:
+			mysqldumpslow在mysql目录的bin目录下面, 这是perl程序, 要下载perl编译器才能运行.
+			具体使用:http://blog.csdn.net/huoyuanshen/article/details/52709519
+			-s，是order的顺序
+				al   平均锁定时间
+				ar   平均返回记录时间
+				at   平均查询时间（默认）
+				c    计数
+				l    锁定时间
+				r    返回记录
+				t    查询时间
+			-t，是top n的意思，即为返回前面多少条的数据
+			-g，后边可以写一个正则匹配模式，大小写不敏感的
+			
+			得到返回记录集最多的10个sql.
+			mysqldumpslow -s r -t 10 log路径
+			得到返访问次数最多的10个sql.
+			mysqldumpslow -s c -t 10 log路径
+			得到按照时间排序的前10条里面含有左连接的查询语句
+			mysqldumpslow -s t -t 10 -g "left join" log路径
+			建议结合|more使用, 否则可能出现爆屏现象
+			mysqldumpslow -s c -t 10 log路径 |more

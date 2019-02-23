@@ -1,0 +1,31 @@
+mysql编码:
+	1:show variables like'%character%';
+		1) character_set_client : MySQL Server 假定client传输数据过来的时候的编码
+		2) character_set_connection: Server收到SQL语句时,将其转换成的编码
+		3) character_set_results: Server在返回数据给客户端时,会将数据转成这个编码
+		4) character_set_system: 元数据编码(表名, 列名等)
+		5) character_set_server, character_set_database, character_set_table, character_set_column: MySQL默认的 服务器/数据库/表/列 编码, 优先级由低到高, 就是表编码可覆盖库编码,列编码可覆盖表编码
+	2:show variables like'%collation%';
+		collation是字符的排序规则,就是字符之间比较大小的规则,例如utf8_general_ci表示的就是按照utf8编码且忽略大小写来排序,MySQL在排序时会将两个比较字符先转化为相同的编码,如果出现编码不兼容,则会抛出错误.
+	3:配置配置文件以改变编码:
+		编辑/etc/mysql/my.cnf
+		在[client]节点下添加
+		default-character-set=utf8
+		在[mysqld]节点下添加
+		character-set-server=utf8
+		collation-server=utf8_general_ci
+		重启mysql服务
+		以上完了之后show variables like'%character%';就可以看见除了character_set_filesystem之外的其他都是utf8
+	4:命令行配置编码:
+		SET NAMES 'ENCODING';
+			这一行相当于设置了
+			SET character_set_client = utf8
+			SET character_set_connection = utf8
+			SET character_set_results = utf8
+			SET collation_connection = utf8
+		SET CHARACTER SET 'ENCODING'
+			这一行相当于设置了
+			SET character_set_client = utf8
+			SET character_set_results = utf8
+		简而言之 SET NAMES 会影响Server的编码和解码, 而 SET CHARACTER SET 只会影响Server的解码.
+		命令行的配置,  只要退出当前会话(并非重启mysql, 只需要quit 再重新登录), 就会失效.		

@@ -1,0 +1,39 @@
+mysql变量:  
+	1.用户变量：以"@"开始，形式为"@变量名"
+		用户变量跟mysql客户端是绑定的，设置的变量，只对当前用户使用的客户端生效
+		设置:	set @变量名 = 变量值;  或者   set @变量名 := 变量值;
+			:=的方式可以运用在一些sql中: select @sum:=(a + b) as sum, @dif:=(a - b) as dif; 因为=号有特殊意义所以用:=
+		查看:	select @变量名
+			前面对该变量名赋值过, 这边才能用.  跟系统变量(seesion,global变量)没有关系. 如:select @Qcache_hits  结果是null.
+	2.局部变量：作用范围在begin到end语句块之间。在该语句块里设置的变量
+		declare语句专门用于定义局部变量。set语句是设置不同类型的变量，包括会话变量和全局变量
+	----------------------------------以上为一类, 以下为一类-----------------------------------------
+	3.全局变量：定义时，以如下两种形式出现，set GLOBAL 变量名  或者  set @@global.变量名 
+		对所有客户端生效。只有具有super权限才可以设置全局变量
+		设置:
+			set global 变量名  或者  set @@global.变量名 
+		查看:
+			show global variables like "%var%";  或者    select @@global.var_name;
+		查看所有的全局变量:
+			show global variables;
+	4.会话变量：只对连接的客户端有效。
+		设置:
+			set session var_name = value;
+			set @@session.var_name = value;
+			set var_name = value;
+		查看:
+			select @@var_name;
+			select @@session.var_name;
+			show session variables like "%var%";
+		查看所有的会话变量:
+			show session variables;
+	
+	局部变量:一般用在sql语句块中，比如存储过程的begin/end
+	用户变量:用户自己设置的变量.  其他用户获得不到.
+	如果会话变量没有设置相应的值, 那么它的值就是全局变量的值.  如果会话变量有值, 那么当然是会话变量的优先级比较高.
+		有些变量只是是全局(set session var_name = value 会报错), 有些变量只是会话(set global var_name = value 会报错).  有些则全局和会话都有.  
+	如果一些变量全局和会话都是有的话,  那不是有点蛋疼:  因为全局的设置就没有什么软用了,  因为任何操作肯定是都有一个会话的,  当然就按会话变量来走的. 全局变量懵逼中.
+		是不是我认识错了. 
+	
+show status 状态值(mysql运行时，动态产生的数据)  不可设置.
+show variables 设置值(配置的值,专门就是被设置用的)

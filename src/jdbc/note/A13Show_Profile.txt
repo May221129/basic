@@ -1,0 +1,58 @@
+show profile 调优:
+	定义: 是mysql提供可以用来分析当前会话中语句执行的资源消耗情况.  可以用于SQL的调优的测量.
+		注意:是当前会话(当前连接), 如果让全局都搞的话,不仅耗资源,也没有必要.  一般情况下是通过慢查询日志抓到异常sql之后, 才会进行show profile.
+		默认情况下,参数处于关闭状态. 并保存最近15次运行结果.
+	步骤:
+		1:查看当前版本是否支持 show profile:
+			show variables like '%profiling%';
+		2:开启:
+			set profiling = on
+		3:执行一些sql
+		4:查看结果:
+			4.1:show profiles;  
+				三列 :   query_id 	duration(时间)	query(查询语句)
+			4.2:show profile cpu,block io for query {query_id}
+				六列:	status(各种状态)	duration(时间)	CPU_user(用户时间)	CPU_system(系统时间)	Block_ops_in(输入IO)	Block_ops_out(输出IO)
+			4.3：各种状态值:
+				以下是一次查询的过程,  有些status在下面的过程中并没有体现.  因查询的不过而过程不同.
+				starting								开始,搞连接之类的
+				waiting for query cache lock			找缓存锁
+				checking query cache for query			检查缓存
+				checking permissions					检查权限
+				opening tables							打开表, 也就是from table
+				system lock		
+				init									初始化
+				stoing result in query cache			将查询结果存到缓存中
+				end										结束
+				query end								查询结束
+				cloing tables							关闭表
+				freeing items							
+				loggin slow query						记录慢查询日志
+				cleaning up								清除
+				
+				optimizing								优化器进行优化
+				Sending data							收集和传输数据(若返回的字段过多,或者数据量大(text),这个时间会炸)(收集数据应该指的是找到索引之后再去找对应的数据行的这个动作)
+				sorting data							给数据排序, 应该对应的就是filesort
+				
+				详见文档:processlist_state.txt
+				
+			4.4: 4.3中的status, 个人觉得都应该要懂得其什么意思的.  不过现在先整理一下比较重要的或者说比较致命的几个
+				converting heap to MyIsam  	线程将一个内部临时表转换为磁盘上的MyISAM表。
+				create tmp table			创建临时表.意味着:要创建表, 拷贝数据, 用完后再删除.(常见于group by)
+				copying to tem table		拷贝数据到临时表
+				copying to tmp table on disk把内存中临时表复制到磁盘
+				locked						死锁.
+			4.5:show profile cpu,block io for query {query_id}中除了cpu,block id还有其他值
+				all: 			显示所有的开销信息
+				block io		显示块io相关开销
+				context switches上下文切换相关开销
+				cpu				cpu相关开销
+				ipc				发送和接收相关开销
+				memory			内存相关开销
+				page faults		页面错误相关开销
+				source			和source_function, source_file, source_line相关开销
+				swap			交换次数相关开销.
+				重要的或者说比较常用的是cpu和io开销.
+			
+			这些状态跟show processlist 里面的 state状态是一样的.   看帮助手册：https://dev.mysql.com/doc/refman/5.6/en/general-thread-states.html
+				详见文档:processlist_state.txt

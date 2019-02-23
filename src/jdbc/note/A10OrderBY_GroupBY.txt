@@ -1,0 +1,80 @@
+order by/ group by调优:
+	
+	1:order by子句   extra尽量用上using index 不要  filesort
+		以下是用staffs表.  建立的索引是 age, add_time组合索引.
+		1.1: explain select * from staffs where age > 33 order by age;
+			没有filesort
+			explain select * from staffs where age > 33 order by age desc;
+				没有filesort
+			explain select * from staffs where age > 33 order by age, add_time;
+				没有filesort
+			explain select * from staffs where age > 33 order by age desc, add_time;
+				有filesort
+		1.2: explain select * from staffs where age > 33 order by age, add_time;
+			没有filesort
+		1.3: explain select * from staffs where age > 33 order by add_time;
+			有filesort
+		1.4: explain select * from staffs where age > 33 order by add_time, age;
+			有filesort
+		1.5: explain select * from staffs where age > 33 order by age, add_time desc;
+			有filesort 
+		1.6: explain select * from staffs where add_time < now() order by age, add_time desc;
+			有filesort
+		1.7: explain select * from staffs where add_time < now() and age > 25 order by age, add_time desc;
+			有filesort 
+		1.8: explain select * from staffs where age = 25 order by add_time desc;
+			没有filesort
+		总结:
+			1:暂时不看where部分, 只看order by部分, 规则: 最左边的索引要开头, 且顺序不能乱,
+				(order by顺序不一样, 就肯定用不上, 因为order by的顺序有一定意义而不像where的条件,  
+				where就算顺序不一样, mysql优化器会优化, 但是order by是不可被优化的,因为意义可能不相同).
+			2:加索引的时候不加desc/asc默认是asc, 查询的时候要跟加索引的时候的asc/desc要一致, 不一致就不行.
+				从第一点可以看出, 不一致在某些情况下也可以, 如果排序单列, mysql会自动反过来排序成功.
+				但是如果双列都用上, 那么两列的升序和降序就都要跟索引一致.
+			3:order by部分用上的索引A排序, 那么where部分必须也是得用上索引A, 不可以是其他索引或者非索引.
+				为什么order by会这么依赖where?
+				因为order by是建立在where用了A索引的情况下, order by在用A索引进行排序, 然后就完美的不出filesort
+			4:where   order by这两个部分的索引规则超级像, 感觉都是一样的使用, 只不过又有不同之处. 
+				比如	where允许顺序不一致,  order by 不允许
+					where组合索引之间可以插入其他值, order by不行.
+					因为where能被优化器优化, 因为语义不变, 而order by不能被优化, 因为语义会变.
+					创建索引的时候可以是: CREATE INDEX indexname [ASC|DESC] on tableName(col1, col2...);
+			5:order by最左边的可以是个常量.如1.8所示, age已经是等于25, 是个常量没有排序的必要,所以可以从add_time开始.
+				当然了, 如果索引是abc where a= '' and b = '' order by c也是没问题的.
+			
+			疑问点: where a in(...) order by b,c 这个是filesort
+				那么where a in(...) and b and c 可不可以用上索引嘞, 应该可以哟， 试试.
+		--------------------------------
+	2：当filesort避无可避的时候, 那么针对filesort
+		双路排序(版本4.1之前)
+			字面意思就是两次扫描磁盘,最终得到数据.
+			读取行指针和orderby列, 对它们进行排序,然后扫描已经排序的列表,按照列表中的值重新从列表中读取对应的数据输出.
+			简而言之:从磁盘读取排序字段,在buffer进行排序, 然后再从磁盘读取其他数据.
+			因为多了次IO, 所以耗时.
+		单路排序(版本4.1之后)
+			从磁盘读取查询需要的所有列, 按照orderby列在buffer对它们进行排序,然后扫描
+				排序后的列进行输出.
+			它的效率会更快一些, 避免了第二次读取数据.并且把随机IO变成了顺序IO，但是它肯定会
+				使用更多的内存空间, 因为它把每一行都保存在内存中.
+			单路排序潜在的问题:如果sort_buffer的容量不够大, 那么就会分成多次取数据, 多次排序, 然后再多次合并
+				导致了多次的IO以及多次的合并运算.
+			潜在问题的原因: 单路排序是将所要查询的所有字段放在内存中, 所以才可以是单词IO就可以解决.
+				不过也导致了内存容易被爆.
+			优化策略:
+				sort_buffer_size 配置调大,要多大只能试试看了.
+				max_length_for_sort_data 也要相应调大.
+				尽量不要用select *, 容易爆了内存. 导致很慢.
+					好多地方要求不要select *, 比如索引覆盖.
+	3:group by:
+		groupby是先排序后分组.
+		group by跟orderby的规则几乎一样.
+		唯一不一样的就是having的出现而不同.至于到底带来什么影响, 还真的没有试试.
+		按老师的说法总结: where高于having, 能用where的地方就不要用having.
+		having:
+			where针对表中的列发挥作用，查询数据having是对查询结果中得到的列发挥作用，筛选数据(也就是说从查询出的结果集再次进行筛选).
+			
+			having与where类似，可以筛选数据，where后的表达式怎么写，having后就怎么写.
+			
+			能用where的地方 也能用having ,用haveing的地上 不一定能用where.
+			
+			group by出现问题,也可以通过sort_buffer_size  max_length_for_sort_data来做优化.避免磁盘IO
