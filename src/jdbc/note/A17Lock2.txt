@@ -48,6 +48,7 @@ mysql的锁机制相关的问题：
 	(2)查看所有被打开的表列表(是所有,并非只有当前会话):show open tables; ==》1就是锁了，0就是没上锁
 	(3)给当前会话所有锁住表解锁:unlock tables;
 	(4)分析表锁的频度,及表锁争用等待情况:show status like 'table%';
+		分析行锁的使用情况：show status like 'innodb_row_lock%';
 	(5)查看当前数据库的事务隔离级别：show variables like 'tx_isolation'
 	(6)关闭数据库的自动提交：set autocommit=0;    如果想再开启：set autocommit=1
 
@@ -72,6 +73,8 @@ mysql的锁机制相关的问题：
 	提问：①在不考虑数据库的数据备份的情况下，是否有了mvcc就不需要再做读写分离了？
 	②mvcc和“数据库的读写分离”的效率对比。
 
+10.可重入锁：synchronized、java.util.concurrent.locks.ReentrantLock.
+	
 ===============================================================
 读博客： http://hedengcheng.com/?p=771#_Toc374698322 
 1.RDBMS即关系数据库管理系统(Relational Database Management System)
@@ -135,7 +138,8 @@ mysql的锁机制相关的问题：
 4.修改时Copy出当前版本随意修改，各个事务之间无干扰。 ==》 有点类似容器“CopyOnWriteArrayList/CopyOnWriteArraySet:写入并复制。”
 5.保存时比较版本号，如果成功（commit），则覆盖原记录；失败则放弃copy（rollback）==》 cas:原值、比较值、目标值
 6.用来和查询每行记录的版本号进行比较。==》不明白什么是“查询每行记录的版本号”
-7.更新丢失
+7.更新丢失是什么？
+	答：更新丢失是指并发下两次更新同时进行，后一次更新覆盖了前一次更新的情况，更新丢失是数据没有保证一致性导致的。
 
 
 
