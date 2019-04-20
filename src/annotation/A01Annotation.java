@@ -1,4 +1,5 @@
 package annotation;
+
 /**
  * 注解Annotation-详细笔记。
  * 
@@ -54,7 +55,7 @@ class Student extends Person{
 	}
 }
 class Person{
-	@SuppressWarnings("unused")//表示抑制编译器警告
+	@SuppressWarnings("unused")//表示抑制编译器警告。
 	private String name;
 	private Integer age;
 	public void sleep(){

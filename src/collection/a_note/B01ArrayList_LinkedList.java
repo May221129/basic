@@ -7,7 +7,7 @@ import org.junit.Test;
 
 /**
  * 测试：分别用ArrayList和LinkedList遍历10万级别的数，用时各为多少？
- * 重点：1.用的循环方式(for？Iterator？)； 2.使用什么方法(get(i)获取下标的方式？next()?)
+ * 重点：1.用的循环方式(for？Iterator？)； 2.使用什么方法(get(i)获取下标的方式？next()?)。
  * 
  * 问题1：为什么LinkedList遍历时那么慢？和ArrayList相比是指数倍的慢。
  * 答：【需要看两个集合的get(i)方法的底层代码得知】

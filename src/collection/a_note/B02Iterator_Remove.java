@@ -196,7 +196,7 @@ public class B02Iterator_Remove {
 	
 	/**
 	 * 增强for循环：
-	 * 下面的操作，会引起“并发修改异常”
+	 * 下面的操作，会引起“并发修改异常”。
 	 */
 	@Test
 	public void testFor(){

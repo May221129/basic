@@ -51,7 +51,7 @@ public class InteratorAndAddTest {
 	}
 	
 	/**
-	 * 不会报错。
+	 * 使用迭代器在遍历时边删除元素则不会报错。
 	 */
 	@Test
 	public void iteratorAndAddTest2(){
