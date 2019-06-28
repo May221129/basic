@@ -1,11 +1,12 @@
 package reflection.a02fieldmethodinvoke;
-/**
- * 调用构造函数，返回该Class对象的一个实例
- */
+
 import java.lang.reflect.Constructor;
 
 import org.junit.Test;
 
+/**
+ * 调用构造函数，返回该Class对象的一个实例
+ */
 public class TestConstructor {
 	@Test
 	public void test1() throws Exception{

@@ -1,13 +1,14 @@
 package reflection.a02fieldmethodinvoke;
-/**
- * Field f1=c.getField("属性名");//只能获取public的属性
- * Field f2=c.getDeclaredField("属性名");//可以获取到private的属性
- */
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
 import org.junit.Test;
 
+/**
+ * Field f1=c.getField("属性名");//只能获取public的属性
+ * Field f2=c.getDeclaredField("属性名");//可以获取到private的属性
+ */
 public class TestField {
 	//获取对应的运行时类的属性
 	@Test

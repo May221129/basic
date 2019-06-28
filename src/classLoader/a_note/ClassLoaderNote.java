@@ -6,8 +6,8 @@ ClassLoader的重点整理：
 	1.三个系统加载器：BootstrapClassLoader，ExtClassLoader，APPClassLoader。
 		1.1 父委托机制；
 		1.2 loadClass(){
-			findLoadedClass();
-			parent.loadCLass();
+			findLoadedClass();//缓存
+			parent.loadCLass();//父委托
 			findClass(){
 				defineClass();
 			}

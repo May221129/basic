@@ -41,7 +41,7 @@ public class PrintFolder3_flag {
 	}
 
 	public static void main(String[] args) {	
-		File file = new File("Q:\\My study");
+		File file = new File("G:\\一打印文件夹测试");
 		Long start = System.currentTimeMillis();
 		printFolder(file, "\t");
 		Long end = System.currentTimeMillis();

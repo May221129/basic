@@ -10,7 +10,7 @@ import java.net.URL;
  */
 public class A02Test {
 	public static void main(String[] args) throws MalformedURLException, ClassNotFoundException {
-		File file = new File("Q:\\ClassLoaderTest");
+		File file = new File("G:\\ClassLoaderTest");
 		URL[] urls = new URL[]{file.toURI().toURL()};
 		A02MyClassLoaderExtendsURLClassLoader classLoader = new A02MyClassLoaderExtendsURLClassLoader(urls);
 		Class clazz = classLoader.loadClass("a02myclassloader.bean.Bean");

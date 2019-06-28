@@ -12,20 +12,20 @@ interface Human {//人
 // 被代理类：超人
 class SuperMan implements Human {
 	public void info() {
-		System.out.println("我是超人！我怕谁！");
+		System.out.println("SuperMan：我是超人！我怕谁！");
 	}
 	public void fly() {
-		System.out.println("I believe I can fly!");
+		System.out.println("SuperMan：I believe I can fly!");
 	}
 }
 
 class HumanUtil {
 	public void method1() {
-		System.out.println("=======方法一=======");
+		System.out.println("======= 方法一 =======");
 	}
 
 	public void method2() {
-		System.out.println("=======方法二=======");
+		System.out.println("======= 方法二 =======");
 	}
 }
 

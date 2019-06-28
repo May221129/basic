@@ -1,13 +1,16 @@
 package reflection.a03proxy;
-//动态代理：
-/*创建一个动态代理类的关键所在：
-1、有一个实现了InvocationHandler接口的类;
-2、 Proxy.newProxyInstance(obj.getClass().getClassLoader(), obj.getClass().getInterfaces(), this);
-3、public Object invoke(Object proxy, Method method, Object[] args);
-*/
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+
+/**
+ * 动态代理
+ * 创建一个动态代理类的关键所在：
+ *	1、有一个实现了InvocationHandler接口的类;
+ *	2、 Proxy.newProxyInstance(obj.getClass().getClassLoader(), obj.getClass().getInterfaces(), this);
+ *	3、public Object invoke(Object proxy, Method method, Object[] args);
+ */
 
 //动态代理类的实现：
 public class TestProxy1 {

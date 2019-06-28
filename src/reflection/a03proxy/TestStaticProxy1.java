@@ -1,6 +1,8 @@
 package reflection.a03proxy;
-//静态代理类的实现：买房子
 
+/**
+ * 静态代理类的实现：买房子
+ */
 public class TestStaticProxy1 {
 	public static void main(String[] args) {
 		ByProxy bp = new ByProxy();
