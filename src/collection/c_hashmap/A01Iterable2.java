@@ -1,14 +1,14 @@
 package collection.c_hashmap;
-/**
- * 创建一个Map集合，用3种方法遍历出key-value：
- */
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-public class A02Circulation {
+/**
+ * 探究2：3种方法遍历出key-value：
+ */
+public class A01Iterable2 {
 	public static void main(String[] args) {
 		HashMap<String,Integer> map = new HashMap<String,Integer>();
 		map.put("赖丽梅", 26);
