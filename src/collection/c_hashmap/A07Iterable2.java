@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * 探究2：3种方法遍历出key-value：
  */
-public class A01Iterable2 {
+public class A07Iterable2 {
 	public static void main(String[] args) {
 		HashMap<String,Integer> map = new HashMap<String,Integer>();
 		map.put("赖丽梅", 26);

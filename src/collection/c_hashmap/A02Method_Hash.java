@@ -1,20 +1,18 @@
 package collection.c_hashmap;
 
 /**
- * 探究：
- * 1.HashMap.hashCode()：本类。
- * 2.为什么要保持equals()和hashCode()的一致性：oop.equalsAndHashCode.A03EqualsAndHashCodeOverwrite
+ * 探究：HashMap.hash()方法中，代码的执行顺序。
  * 
  * @author May
  * 2019年7月25日
  */
-public class A02MethodHashCode {
+public class A02Method_Hash {
 	public static void main(String[] args) {
-		System.out.println(A02MethodHashCode.show(18));//18
-		System.out.println(A02MethodHashCode.hash(18));
+		System.out.println(A02Method_Hash.show(18));//18
+		System.out.println(A02Method_Hash.hash(18));
 		
 		System.out.println("-------------------------");
-		A02MethodHashCode.weiYi();
+		A02Method_Hash.weiYi();
 	}
 	
 	/**
@@ -22,7 +20,7 @@ public class A02MethodHashCode {
 	 * ②“h >> 1”的计算结果会先赋值给一个临时变量；         temp=9
 	 * ③异或预算；                                                                     27
 	 */
-	static final int hash(Object key) {
+	static final int hash(Object key) {//该hash()方法是我为了方便测试改写了的，并发HashMap的源码。
         int h;
         return (h = key.hashCode()) ^ (h >> 1);
     }

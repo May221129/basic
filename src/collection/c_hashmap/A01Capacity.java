@@ -10,7 +10,7 @@ import java.util.HashMap;
  * @author May
  * 2019年7月23日
  */
-public class A04Capacity {
+public class A01Capacity {
 	public static void main(String[] args) {
 		HashMap<Integer, String> hashMap = new HashMap<>();//使用默认初始阈值（16*0.75）
 		for(int i = 0; i < 15; i++) {

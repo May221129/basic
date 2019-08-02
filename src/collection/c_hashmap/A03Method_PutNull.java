@@ -10,7 +10,7 @@ import java.util.Map.Entry;
  * @author May
  * 2019Äê7ÔÂ25ÈÕ
  */
-public class A03MethodPut_PutNull {
+public class A03Method_PutNull {
 	public static void main(String[] args) {
 		HashMap<String, Integer> hashMap = new HashMap<>();
 		hashMap.put(null, 123);

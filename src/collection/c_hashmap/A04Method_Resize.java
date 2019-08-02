@@ -8,7 +8,7 @@ package collection.c_hashmap;
  * @author May
  * 2019Äê7ÔÂ26ÈÕ
  */
-public class A03MethodResize {
+public class A04Method_Resize {
 	/**
 	final Node<K,V>[] resize() {
         Node<K,V>[] oldTab = table;

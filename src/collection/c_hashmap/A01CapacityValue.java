@@ -12,7 +12,7 @@ package collection.c_hashmap;
  * @author May
  * 2019Äê7ÔÂ26ÈÕ
  */
-public class A04CapacityValue {
+public class A01CapacityValue {
 	public static void main(String[] args) {
 		int a = 1, b = 16;//2^4
 		yu(a, b);

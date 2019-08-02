@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.Test;
 
-public class A01Iterable {
+public class A07Iterable {
 	@Test
 	public void testMap() {
 		Map<String, Integer> m1 = new HashMap<String, Integer>();
