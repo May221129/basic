@@ -46,13 +46,16 @@ public class A03Method_Put {
 							treeifyBin(tab, hash); //链表转红黑树
 						break;
 					}
-					if (e.hash == hash && ((k = e.key) == key || (key != null && key.equals(k)))) //链表上的某个节点的哈希值和key的哈希值相同 && (p.key和key相同)：
+					//链表上的某个节点的哈希值和key的哈希值相同 && (p.key和key相同)：三个条件都满足，表示当前链表包含要插入的键值对，终止遍历
+					if (e.hash == hash && ((k = e.key) == key || (key != null && key.equals(k)))) 
 						break;
 					p = e;
 				}
 			}
+			// 判断要插入的键值对是否存在 HashMap 中
 			if (e != null) { // existing mapping for key
 				V oldValue = e.value;
+				// onlyIfAbsent 表示是否仅在 oldValue 为 null 的情况下更新键值对的值
 				if (!onlyIfAbsent || oldValue == null)
 					e.value = value;
 				afterNodeAccess(e);
@@ -60,6 +63,7 @@ public class A03Method_Put {
 			}
 		}
 		++modCount;
+		// 键值对数量超过阈值时，则进行扩容《==========
 		if (++size > threshold)
 			resize();
 		afterNodeInsertion(evict);

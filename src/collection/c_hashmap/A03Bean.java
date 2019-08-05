@@ -1,7 +1,7 @@
 package collection.c_hashmap;
 
 /**
- * 测试HashMap的链表转红黑树的时机——创建一个类。
+ * 配合A03Method_TreeifyBin类，测试HashMap的链表转红黑树的时机——创建一个类。
  * 该类中去重写hashCode()，让一组数据能得到同样的哈希值，从而实现哈希碰撞。
  * 同时也重写equals()方法。
  * 
