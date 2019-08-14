@@ -4,7 +4,7 @@ package collection.c_hashmap;
  * 探究：HashMap.put(K key, V value)方法。
  * 一、核心步骤：
  * 	1. hash = hash(Object key)；
- * 	2. (容量 - 1) & hash，得到桶的位置（这里的位运算效果等价于“hash % 容量”，等做位运算效率更高）；
+ * 	2. (容量 - 1) & hash，得到桶的位置（这里的位运算效果等价于“hash % 容量”，但做位运算效率更高）；
  * 	3. 桶里没有元素，则直接放进去即可；
  * 		如果桶里已经有元素了，则挨个key.equals那些已经存在于桶中的元素：
  * 			（1）如果有相同的，则keyey覆盖oldKey；

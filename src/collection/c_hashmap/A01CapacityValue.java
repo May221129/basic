@@ -1,10 +1,13 @@
 package collection.c_hashmap;
 
 /**
- * 探究2：为什么HahsMap的容量一定为2的幂？
- * 	答：一个元素放置到哪个桶中，是通过计算“元素的key的哈希值 % 桶数”得到的余数来确定的。
- * 		当容量一定是2^n时，h & (length - 1) == h % length，它俩是等价不等效的，
- * 		因为计算机不太擅长做取模运算，但却非常擅长做位运算，且效率极高，测试见：/important/src/Algorithm/BitAndModulus.java
+ * 探究2：为什么HahsMap的容量一定为2的n次幂？
+ * 	原因：
+ * 		1.一个元素放置到哪个桶中，是通过计算“元素的key的哈希值 % 桶数”得到的余数来确定的。
+ * 			当容量一定是2^n时，hash & (length - 1) == hash % length，它俩是等价不等效的，
+ * 			因为计算机不太擅长做取模运算，但却非常擅长做位运算，且效率极高，测试见：/important/src/Algorithm/BitAndModulus.java
+ * 		2.关系到扩容后元素在newCap中的放置问题：
+ * 			collection.c_hashmap.A04Method_Resize的“二、3.”中有解释。
  * 	
  * 	补充：求余运算：a / b = c …… R;  R = a - bc;  如：1 % 10 == 1 ，是因为 1 / 10 = 0,   余数 = 1 - 10*0 = 1
  * 	博客：https://blog.csdn.net/a_long_/article/details/51594159
