@@ -1,10 +1,10 @@
-package collection.b_collectiontest;
+package collection.b_arraylist;
 
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
 
-public class a01test {
+public class Arrays_ToList {
 	/**
 	 * 工具类Arrays的asList()方法：
 	 * 	public static <T> List<T> asList(T... a) {
