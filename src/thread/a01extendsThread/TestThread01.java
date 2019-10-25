@@ -1,4 +1,4 @@
-package thread.a01extendsthread;
+package thread.a01extendsThread;
 /**
  * 体会什么是多线程：
  * 

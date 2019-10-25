@@ -1,4 +1,4 @@
-package thread.a03deadlock;
+package thread.a03deadLock;
 /**
  * ¶àÏß³ÌËÀËø£º
  * 

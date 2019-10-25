@@ -1,4 +1,4 @@
-package thread.a01extendsthread;
+package thread.a01extendsThread;
 /**
  * synchronized同步方法中，this表示谁的锁：在使用继承Thread实现多线程时，容易出错！
  * 

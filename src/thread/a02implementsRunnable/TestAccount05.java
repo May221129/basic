@@ -1,4 +1,4 @@
-package thread.a02implementsrunnable;
+package thread.a02implementsRunnable;
 /**
  * 多线程的练习题：
  * 

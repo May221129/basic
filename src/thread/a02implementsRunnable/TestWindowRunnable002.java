@@ -1,4 +1,4 @@
-package thread.a02implementsrunnable;
+package thread.a02implementsRunnable;
 /**
  * 存在线程安全问题的情况：
  * 

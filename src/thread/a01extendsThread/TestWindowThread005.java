@@ -1,4 +1,4 @@
-package thread.a01extendsthread;
+package thread.a01extendsThread;
 /**
  * 有线程安全问题的情况：
  * 

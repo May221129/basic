@@ -1,4 +1,4 @@
-package thread.a01extendsthread;
+package thread.a01extendsThread;
 
 /**
  * 继承于Thread类的匿名类对象：创建两个子线程，让其中一个输出1-100之间的偶数，另一个输出1-100之间的奇数：

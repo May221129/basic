@@ -8,7 +8,7 @@ package thread.a04communication;
  * 	2.写锁是排它锁。加了写锁后，当一个写线程在写时，其他线程都执行到写锁时都会被挂起； 
  * 
  * 二、实现：
- * 	1.关键点：synchronized,wait(),notify()/notifyAll(),while.
+ * 	1.关键点：synchronized,wait(),notify()/notifyAll(),while。
  * 	2.锁被抽象出来了，读锁和写锁之所以能锁住线程，靠的是判断reader和writer这两个变量，见readLock()和writeLock()。
  * 	3.被唤醒的线程需要通过while重新做判断，因为：被挂起的线程，被唤醒是后，从当初被挂起的wait()方法之后的代码继续执行下去的。 
  * 	4.某个线程执行过程中去用它并未获得的锁，报异常：java.lang.IllegalMonitorStateException。

@@ -1,4 +1,4 @@
-package thread.a02implementsrunnable;
+package thread.a02implementsRunnable;
 /**
  * 创建多线程的第二种方式：实现Runnable接口：
  */
