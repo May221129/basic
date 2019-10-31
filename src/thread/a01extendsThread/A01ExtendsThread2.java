@@ -3,7 +3,7 @@ package thread.a01extendsThread;
 /**
  * 继承于Thread类的匿名类对象：创建两个子线程，让其中一个输出1-100之间的偶数，另一个输出1-100之间的奇数：
  */
-public class TestThread02 {
+public class A01ExtendsThread2 {
 	public static void main(String[] args) {
 //		SubThread2 st2 = new SubThread2();
 //		SubThread3 st3 = new SubThread3();

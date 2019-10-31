@@ -5,7 +5,7 @@ package thread.a01extendsThread;
  * 利用多线程：继承Thread类的方式，模拟火车票窗口售票：3个窗口，总票数100张：
  * 此程序存在线程的安全问题：打印车票时，会出现重票、错票
  */
-public class TestWindowThread005 {
+public class A03WindowThread {
 	public static void main(String[] args) {
 		
 		Window w1 = new Window();
@@ -22,8 +22,8 @@ public class TestWindowThread005 {
 	}
 }
 class Window extends Thread{
+	//ticket属性需要注意：总票数为100，所以100需要设置成static，成为类的属性。
 	private static int ticket = 100;
-//==>ticket属性需要注意：总票数为100，所以100需要设置成static，成为类的属性。
 	public void run(){
 		for(;;){
 			if(ticket > 0){

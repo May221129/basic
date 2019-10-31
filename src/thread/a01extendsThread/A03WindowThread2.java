@@ -5,7 +5,7 @@ package thread.a01extendsThread;
  * 利用多线程：继承Thread类的方式，模拟火车票窗口售票：3个窗口，总票数100张：
  * 此程序存在线程的安全问题：打印车票时，会出现重票、错票，利用同步代码块synchronized在这里进行处理：
  */
-public class TestWindowThread006 {
+public class A03WindowThread2 {
 	public static void main(String[] args) {
 		
 		Window2 w1 = new Window2();
@@ -35,6 +35,8 @@ class Window2 extends Thread{
 						e.printStackTrace();
 					}
 					System.out.println(Thread.currentThread().getName() + "售票,票号为:" + ticket--);
+				}else {
+					break;
 				}
 			}
 		}

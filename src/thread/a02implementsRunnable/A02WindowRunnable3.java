@@ -5,7 +5,7 @@ package thread.a02implementsRunnable;
  * 利用多线程:实现Runnable接口的方式，模拟火车票窗口售票：3个窗口，总票数100张：
  * 此程序存在线程的安全问题：打印车票时，会出现重票、错票，在这里进行处理，利用synchronized同步方法在这里进行处理：
  */
-public class TestWindowRunnable004 {
+public class A02WindowRunnable3 {
 	public static void main(String[] args) {
 		Window3 w1 = new Window3();
 		

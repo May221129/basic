@@ -1,13 +1,17 @@
 package thread.a01extendsThread;
 /**
- * 多线程：Thread方法的调用：
+ * 多线程：Thread方法的调用：设置线程的优先级
+ * 1. setName(……)：设置线程的名字；
+ * 2. setPriority(Thread.MAX_PRIORITY)：设置线程的优先级；
+ * 3. Thread.currentThread():获取当前线程；
  */
-public class TestThreadMethod04 {
+public class A02ThreadMethod {
 	public static void main(String[] args) {
 		SubThread1 st = new SubThread1();
-		st.start();
 		st.setPriority(Thread.MAX_PRIORITY);//也可以直接写成st.setPriority(10);
 		st.setName("子线程");
+		st.start();
+		
 		Thread.currentThread().setName("………………主线程");
 		for(int i = 1; i <= 100; i++){
 			System.out.println( Thread.currentThread().getName() + ":" + Thread.currentThread().getPriority() + " : " + i);

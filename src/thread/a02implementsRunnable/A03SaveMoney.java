@@ -3,10 +3,12 @@ package thread.a02implementsRunnable;
  * 多线程的练习题：
  * 
  * 银行有一个账户，有两个储户分别向同一个账户存3000元，
- * 每次存1000元，存3次，存完打印账户余额：
+ * 每次存1000元，存3次，存完打印账户余额。
  * 拓展：实现二者交替打印：使用线程的通信
+ * 
+ * 用extends Thread的方式，来完成这题：/javase/src/thread/a01extendsThread/TestSaveMoney08.java
  */
-public class TestAccount05 {
+public class A03SaveMoney {
 	public static void main(String[] args) {
 		Account a = new Account();
 		

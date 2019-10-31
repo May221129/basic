@@ -33,7 +33,7 @@ package thread.a_note;
  *  	② all assignments of references：对引用的操作，一般指获取和赋值操作。
  *  	③ all operations of java.concurrent.Atomic* classes：java.concurrent（并发包）下的Atomic*类。
  *  	④ all assignments to volatile longs and doubles：jvm版本是32位时操作long和double，如果声明该long或double变量时加上volatile，就是原子操作了。
- * 	2.非原子操作：上面的4中情况之外的，都是非原子操作。
+ * 	2.非原子操作：上面的4种情况之外的，都是非原子操作。
  *  	如：i++ 是非原子操作，它的操作分为3步：① 拿到i ②i+1 ③把结果赋值给自己
  *  
  *  五、线程通信：

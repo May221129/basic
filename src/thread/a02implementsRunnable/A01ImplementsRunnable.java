@@ -2,7 +2,7 @@ package thread.a02implementsRunnable;
 /**
  * 创建多线程的第二种方式：实现Runnable接口：
  */
-public class TestImplementsRunnable01 {
+public class A01ImplementsRunnable {
 	public static void main(String[] args) {
 //3、创建一个Runnable接口实现类的对象：
 		SubThread1 st = new SubThread1();
