@@ -1,13 +1,13 @@
 package thread.b01JavaConcurrencyInPractic;
 
 /**
- * 3.2 发布与逸出
+ * 3.2 发布与逸出（笔记：G:\mystudy\studynotes\javaSE\thread\《Java并发编程实战》笔记.xmind）
  * 探讨：在构造函数中调用一个可改写的实例方法时（既不是私有方法，也不是终结方法），同样会导致this引用在构造过程中逸出。
  * 
  * @author May
  * 2019年11月16日
  */
-public class A01PublishAndEscape2 {
+public class A03PublishAndEscape2 {
 	public static void main(String[] args) {
 		new C();
 	}

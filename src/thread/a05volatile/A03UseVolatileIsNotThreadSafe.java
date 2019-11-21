@@ -19,7 +19,7 @@ package thread.a05volatile;
  * 
  * @author May 2019Äê11ÔÂ14ÈÕ
  */
-public class A03UseVolatileIsThreadSafe {
+public class A03UseVolatileIsNotThreadSafe {
 	public static void main(String[] args) {
 		Window w = new Window();
 

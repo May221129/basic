@@ -1,7 +1,7 @@
 package thread.b01JavaConcurrencyInPractic;
 
 /**
- * 3.2 发布与逸出。
+ * 3.2 发布与逸出。（笔记：G:\mystudy\studynotes\javaSE\thread\《Java并发编程实战》笔记.xmind）
  * 
  * 探讨：发布一个尚未构造完成的对象，这会导致该对象的逸出。
  * 
@@ -14,7 +14,7 @@ package thread.b01JavaConcurrencyInPractic;
  * @author May
  * 2019年11月16日
  */
-public class A01PublishAndEscape {
+public class A03PublishAndEscape {
 	public static void main(String[] args) {
 		new B(new A());//先完成B的初始化，再做A的初始化。
 	}
