@@ -1,5 +1,11 @@
 package oop.innerclass;
-//内部类的知识-成员内部类
+
+/**
+ * 内部类的知识-成员内部类
+ * 
+ * @author May
+ * 2019年11月26日
+ */
 public class TestInnerClass {
 	public static void main(String[] args) {
 //		创建静态的Hand类的对象：
