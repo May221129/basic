@@ -1,7 +1,12 @@
 package oop.finaltest;
-//final（最终）的练习：
-//分别用来修饰属性、构造器、方法的作用：
-public class TestFinal {
+
+/**
+ * final（最终）的练习：分别用来修饰属性、构造器、方法后会发挥什么作用
+ * 
+ * @author May
+ * 2019年11月27日
+ */
+public class A01InitFinalField {
 
 }
 class A{
