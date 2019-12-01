@@ -51,8 +51,8 @@ class Customer implements Runnable{//消费者
 	}
 }
 
-class Clerk{//店员
-	private int product;//产品
+class Clerk{//产品
+	private int product;
 	
 	/**
 	 * 生产产品
