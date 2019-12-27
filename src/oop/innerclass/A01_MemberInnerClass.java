@@ -6,7 +6,7 @@ package oop.innerclass;
  * @author May
  * 2019年11月26日
  */
-public class TestInnerClass {
+public class A01_MemberInnerClass {
 	public static void main(String[] args) {
 //		创建静态的Hand类的对象：
 		Person.Hand h = new Person.Hand("左手", 10.0);

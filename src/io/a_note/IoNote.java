@@ -37,7 +37,7 @@ package io.a_note;
 				BufferedInputStream比FileInputStream多了一个缓冲区，输入的数据会先将buf[]一次性存放满、缓存到缓冲区中。
 				执行read时先从缓冲区读取，当缓冲区数据读完时再把缓冲区的buf[]填满。因此，当每次读取的数据量很小时，
 				FileInputStream每次都是从硬盘读入，而BufferedInputStream是先从磁盘读入的数据存满buf[]并将buf[]放入缓冲区，
-				再从缓冲区读入到内存中。读取内存速度比读取硬盘速度快得多，因此BufferedInputStream效率高。
+				再从缓冲区读入到内存中。读取内存速度比读取硬盘速度快得多，因此BufferedInputStream效率高。。
 				==>劣势和 BufferedOutputStream类似：BufferedInputStream的默认缓冲区大小是8192字节。当每次读取数据量接近或远超这个值时，两者效率就没有明显差别了。
 	3. 注意：
 		（1）缓冲流要“套接”在相应的节点流之上。

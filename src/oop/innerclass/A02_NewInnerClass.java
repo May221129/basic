@@ -9,7 +9,7 @@ import oop.innerclass.A.C;
  * @author May
  * 2019年11月26日
  */
-public class ZhuDongYinYong {
+public class A02_NewInnerClass {
 	public static void main(String[] args) {
 		//创建静态内部类的对象：
 		new A.B();

@@ -1,6 +1,12 @@
 package oop.innerclass;
-//内部类的知识-局部内部类
-public class TestInnerClass1 {
+
+/**
+ * 内部类的知识-局部内部类
+ * 
+ * @author May
+ * 2019年12月27日
+ */
+public class A01_LocalInnerClass1 {
 
 }
 class OutClass{
