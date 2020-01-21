@@ -1,5 +1,11 @@
 package oop.toString;
-//equals()方法和toString()方法的练习
+
+/**
+ * equals()方法和toString()方法的练习
+ * 
+ * @author May
+ * 2020年1月9日
+ */
 public class TestGeometricObject {
 	public static void main(String[] args) {
 //		创建两个对象，判断其颜色是否相等：

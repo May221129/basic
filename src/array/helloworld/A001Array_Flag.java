@@ -3,7 +3,7 @@ package array.helloworld;
 
  数组（由数据类型和元素长度来确定）
   
-一、如何定义一个数组：
+一、如何定义一个数组（两种方式）：
 	1、数组的声明；
 	2、初始化：静态初始化(初始化数组与给数组元素赋值 同时进行)、动态初始化(初始化数组与给数组元素赋值 分开进行)；
 
@@ -30,9 +30,12 @@ package array.helloworld;
 public class A001Array_Flag {
 	public static void main(String[] args){
 		
-		//声明一个数组：
+		//声明一个数组，方式一：
 		String[] names;//加了[]，表明它是一个数组
 		int[] scores;
+		
+		//声明一个数组，方式二：
+		int values[];//这种声明方式比较少用，也比较少见，在String类中就使用了这种方式：private final char value[];
 		
 		//静态初始化；
 		names = new String[]{"张三","李四","王五"};
